@@ -1,0 +1,30 @@
+{
+  "services": [
+    {
+      "name": "booksonic",
+      "image": "lscr.io/linuxserver/booksonic-air:2201.1.0",
+      "isMain": true,
+      "internalPort": 4040,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}",
+        "CONTEXT_PATH": "{APP_PROTOCOL:-http}://${APP_DOMAIN}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/data/books/spoken",
+          "containerPath": "/audiobooks"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/data/podcasts",
+          "containerPath": "/podcasts"
+        }
+      ]
+    }
+  ]
+}
