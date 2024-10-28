@@ -1,23 +1,68 @@
-## LibreSpeed
 
-No Flash, No Java, No Websocket, No Garbage.
-
-This is a very lightweight speed test implemented in Javascript, using XMLHttpRequest and Web Workers.
-
-## Compatibility
-
-All modern browsers are supported: IE11, latest Edge, latest Chrome, latest Firefox, latest Safari.
-Works with mobile versions too.
-
-## Features
-
-* Download
-* Upload
-* Ping
-* Jitter
-* IP Address, ISP, distance from server (optional)
-* Telemetry (optional)
-* Results sharing (optional)
-* Multiple Points of Test (optional)
-
-![Screenrecording of a running Speedtest](https://speedtest.fdossena.com/mpot_v6.gif)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "librespeed",
+      "image": "lscr.io/linuxserver/librespeed:5.4.20240804",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}",
+        "PASSWORD": "${APP_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/config"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.8'
+services:
+  librespeed:
+    image: lscr.io/linuxserver/librespeed:5.4.20240804
+    container_name: librespeed
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    - PASSWORD=${APP_PASSWORD}
+    volumes:
+    - ${APP_DATA_DIR}/data:/config
+    ports:
+    - ${APP_PORT}:80
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.librespeed-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.librespeed.loadbalancer.server.port: 80
+      traefik.http.routers.librespeed-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.librespeed-insecure.entrypoints: web
+      traefik.http.routers.librespeed-insecure.service: librespeed
+      traefik.http.routers.librespeed-insecure.middlewares: librespeed-web-redirect
+      traefik.http.routers.librespeed.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.librespeed.entrypoints: websecure
+      traefik.http.routers.librespeed.service: librespeed
+      traefik.http.routers.librespeed.tls.certresolver: myresolver
+      traefik.http.routers.librespeed-local-insecure.rule: Host(`librespeed.${LOCAL_DOMAIN}`)
+      traefik.http.routers.librespeed-local-insecure.entrypoints: web
+      traefik.http.routers.librespeed-local-insecure.service: librespeed
+      traefik.http.routers.librespeed-local-insecure.middlewares: librespeed-web-redirect
+      traefik.http.routers.librespeed-local.rule: Host(`librespeed.${LOCAL_DOMAIN}`)
+      traefik.http.routers.librespeed-local.entrypoints: websecure
+      traefik.http.routers.librespeed-local.service: librespeed
+      traefik.http.routers.librespeed-local.tls: true
+      runtipi.managed: true
+ 
+```
