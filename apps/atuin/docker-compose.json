@@ -1,0 +1,38 @@
+{
+  "services": [
+    {
+      "name": "atuin",
+      "image": "ghcr.io/atuinsh/atuin:18.3.0",
+      "isMain": true,
+      "internalPort": 8888,
+      "environment": {
+        "ATUIN_PORT": "8888",
+        "ATUIN_HOST": "0.0.0.0",
+        "ATUIN_OPEN_REGISTRATION": "${ATUIN_ALLOW_REGISTRATION}",
+        "ATUIN_DB_URI": "postgres://atuin:${ATUIN_DB_PASSWORD}@atuin-db/atuin"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ],
+      "command": "server start"
+    },
+    {
+      "name": "atuin-db",
+      "image": "postgres:14",
+      "environment": {
+        "POSTGRES_USER": "atuin",
+        "POSTGRES_PASSWORD": "${ATUIN_DB_PASSWORD}",
+        "POSTGRES_DB": "atuin"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data/"
+        }
+      ]
+    }
+  ]
+}
