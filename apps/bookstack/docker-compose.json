@@ -1,0 +1,45 @@
+{
+  "services": [
+    {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.10.20241021",
+      "isMain": true,
+      "internalPort": 80,
+      "dns": [
+        "${DNS_IP}"
+      ],
+      "environment": {
+        "APP_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
+        "DB_HOST": "bookstack-db",
+        "DB_USERNAME": "tipi",
+        "DB_PASSWORD": "${BOOKSTACK_DB_PASS}",
+        "DB_DATABASE": "bookstackapp"
+      },
+      "dependsOn": [
+        "bookstack-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ]
+    },
+    {
+      "name": "bookstack-db",
+      "image": "lscr.io/linuxserver/mariadb",
+      "environment": {
+        "TZ": "${TZ}",
+        "MYSQL_DATABASE": "bookstackapp",
+        "MYSQL_USER": "tipi",
+        "MYSQL_PASSWORD": "${BOOKSTACK_DB_PASS}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/config"
+        }
+      ]
+    }
+  ]
+}
