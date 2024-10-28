@@ -1,0 +1,10 @@
+{
+  "services": [
+    {
+      "name": "jellyfin-vue",
+      "image": "ghcr.io/jellyfin/jellyfin-vue:unstable.2023-09-18.fe0f640",
+      "isMain": true,
+      "internalPort": 80
+    }
+  ]
+}
