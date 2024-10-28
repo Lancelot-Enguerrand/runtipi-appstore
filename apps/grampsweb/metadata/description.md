@@ -1,19 +1,99 @@
-# Gramps Web &ndash; Frontend
 
-This is the repository for the frontend of [Gramps Web](https://www.grampsweb.org/), a modern web app that allows to browse and collaboratively edit a genealogical database, based on and interoperable with the [Gramps](https://gramps-project.org) desktop application.
-
-Gramps Web is composed of three building blocks: at its core, the [Gramps](https://github.com/gramps-project/gramps) Python library that also powers the desktop application, secondly [Gramps Web API](https://github.com/gramps-project/gramps-web-api), a Python REST API server that makes a Gramps database accessible over the web, and finally the Javascript web interface, or frontend, that is developed in this repository.
-
-## Screenshot
-
-![Gramps Web Screenshot](https://raw.githubusercontent.com/gramps-project/gramps-web/c616f9bfac76a613692b1c3c3582b00ca05b24d5/screenshot.png)
-
-## Demo
-
-A demo deployment based on the Gramps example family tree is available at [Demo](https://demo.grampsweb.org/). Use `owner`, `editor`, `contributor`, or `member` as username and the same as password.
-
-## Documentation
-
-- The user documentation for Gramps Web can be found at [Gramps Web Homepage](https://www.grampsweb.org/)
-- The developer documentation for the frontend can be found at [Gramps Web Developer Documentation](https://www.grampsweb.org/dev-frontend/)
-To report issues or provide feedback, visit [Gramps Web Help](https://www.grampsweb.org/help/)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "grampsweb",
+      "image": "ghcr.io/gramps-project/grampsweb:v24.8.0",
+      "isMain": true,
+      "internalPort": 5000,
+      "environment": {
+        "GRAMPSWEB_TREE": "${GRAMPSWEB_TREE}",
+        "GUNICORN_NUM_WORKERS": 1
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/users",
+          "containerPath": "/app/users"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/index",
+          "containerPath": "/app/indexdir"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/thumb_cache",
+          "containerPath": "/app/thumbnail_cache"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/cache",
+          "containerPath": "/app/cache"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/secret",
+          "containerPath": "/app/secret"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/db",
+          "containerPath": "/root/.gramps/grampsdb"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/media",
+          "containerPath": "/app/media"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/tmp",
+          "containerPath": "/tmp"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  grampsweb:
+    image: ghcr.io/gramps-project/grampsweb:v24.8.0
+    container_name: grampsweb
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:5000
+    environment:
+      GRAMPSWEB_TREE: ${GRAMPSWEB_TREE}
+      GUNICORN_NUM_WORKERS: 1
+    volumes:
+    - ${APP_DATA_DIR}/users:/app/users
+    - ${APP_DATA_DIR}/index:/app/indexdir
+    - ${APP_DATA_DIR}/thumb_cache:/app/thumbnail_cache
+    - ${APP_DATA_DIR}/cache:/app/cache
+    - ${APP_DATA_DIR}/secret:/app/secret
+    - ${APP_DATA_DIR}/db:/root/.gramps/grampsdb
+    - ${APP_DATA_DIR}/media:/app/media
+    - ${APP_DATA_DIR}/tmp:/tmp
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+      traefik.enable: true
+      traefik.http.middlewares.grampsweb-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.grampsweb.loadbalancer.server.port: 80
+      traefik.http.routers.grampsweb-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.grampsweb-insecure.entrypoints: web
+      traefik.http.routers.grampsweb-insecure.service: grampsweb
+      traefik.http.routers.grampsweb-insecure.middlewares: grampsweb-web-redirect
+      traefik.http.routers.grampsweb.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.grampsweb.entrypoints: websecure
+      traefik.http.routers.grampsweb.service: grampsweb
+      traefik.http.routers.grampsweb.tls.certresolver: myresolver
+      traefik.http.routers.grampsweb-local-insecure.rule: Host(`grampsweb.${LOCAL_DOMAIN}`)
+      traefik.http.routers.grampsweb-local-insecure.entrypoints: web
+      traefik.http.routers.grampsweb-local-insecure.service: grampsweb
+      traefik.http.routers.grampsweb-local-insecure.middlewares: grampsweb-web-redirect
+      traefik.http.routers.grampsweb-local.rule: Host(`grampsweb.${LOCAL_DOMAIN}`)
+      traefik.http.routers.grampsweb-local.entrypoints: websecure
+      traefik.http.routers.grampsweb-local.service: grampsweb
+      traefik.http.routers.grampsweb-local.tls: true
+ 
+```
