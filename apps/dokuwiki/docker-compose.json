@@ -1,0 +1,19 @@
+{
+  "services": [
+    {
+      "name": "dokuwiki",
+      "image": "lscr.io/linuxserver/dokuwiki:2022-07-31a-ls158",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ]
+    }
+  ]
+}
