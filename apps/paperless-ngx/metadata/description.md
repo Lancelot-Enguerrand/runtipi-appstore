@@ -1,39 +1,180 @@
-# Paperless-ngx 
-Paperless-ngx is a document management system that transforms your physical documents into a searchable online archive so you can keep, well, less paper.
 
-## ! IMPORTANT - PLEASE READ !
-- Please **be patient** during installation, it may take a few minutes to download and install all dependencies.
-
-- Please wait a few seconds after Tipi says that the installation was finished, because Paperless-ngx needs some time to start.
-
-- **Tika** is available in this App, however you need to decide if you want to use it or not. You may disable it because of performance reasons. 
-  - Tika allows you to upload Office documents (MSOffice, LibreOffice, etc) and automatically creates PDF versions of these documents. 
-  - If you disable Tika, you will not be able to upload these document types. 
-  - See here for more Information about Tika: https://docs.paperless-ngx.com/configuration/#tika
-
-![Dashboard](https://github.com/paperless-ngx/paperless-ngx/raw/main/resources/logo/web/png/Black%20logo%20-%20no%20background.png#gh-light-mode-only)
-
-![Dashboard](https://raw.githubusercontent.com/paperless-ngx/paperless-ngx/main/docs/assets/screenshots/documents-smallcards.png#gh-light-mode-only)
-
-- Organize and index your scanned documents with tags, correspondents, types, and more.
-- Performs OCR on your documents, adds selectable text to image only documents and adds tags, correspondents and document types to your documents.
-- Supports PDF documents, images, plain text files, and Office documents (Word, Excel, Powerpoint, and LibreOffice equivalents).
-  - Office document support is optional and provided by Apache Tika (see [configuration](https://docs.paperless-ngx.com/configuration/#tika))
-- Paperless stores your documents plain on disk. Filenames and folders are managed by paperless and their format can be configured freely.
-- Single page application front end.
-  - Includes a dashboard that shows basic statistics and has document upload.
-  - Filtering by tags, correspondents, types, and more.
-  - Customizable views can be saved and displayed on the dashboard.
-- Full text search helps you find what you need.
-  - Auto completion suggests relevant words from your documents.
-  - Results are sorted by relevance to your search query.
-  - Highlighting shows you which parts of the document matched the query.
-  - Searching for similar documents ("More like this")
-- Email processing: Paperless adds documents from your email accounts.
-  - Configure multiple accounts and filters for each account.
-  - When adding documents from mail, paperless can move these mail to a new folder, mark them as read, flag them as important or delete them.
-- Machine learning powered document matching.
-  - Paperless-ngx learns from your documents and will be able to automatically assign tags, correspondents and types to documents once you've stored a few documents in paperless.
-- Optimized for multi core systems: Paperless-ngx consumes multiple documents in parallel.
-- The integrated sanity checker makes sure that your document archive is in good health.
-- [More screenshots are available in the documentation](https://docs.paperless-ngx.com/#screenshots).
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "paperless-ngx",
+      "image": "ghcr.io/paperless-ngx/paperless-ngx:2.13.0",
+      "isMain": true,
+      "internalPort": 8000,
+      "environment": {
+        "PAPERLESS_REDIS": "redis://broker:6379",
+        "PAPERLESS_DBHOST": "db",
+        "PAPERLESS_ADMIN_USER": "${PAPERLESS_ADMIN_USERNAME}",
+        "PAPERLESS_ADMIN_PASSWORD": "${PAPERLESS_ADMIN_PASSWORD}",
+        "PAPERLESS_TIKA_ENABLED": "${PAPERLESS_TIKA_ENABLED}",
+        "PAPERLESS_TIKA_GOTENBERG_ENDPOINT": "http://gotenberg:3000",
+        "PAPERLESS_TIKA_ENDPOINT": "http://tika:9998",
+        "PAPERLESS_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
+        "COMPOSE_PROJECT_NAME": "paperless-ngx",
+        "PAPERLESS_CSRF_TRUSTED_ORIGINS": "https://paperless-ngx.${LOCAL_DOMAIN},https://${APP_DOMAIN},http://${INTERNAL_IP}:${APP_PORT}"
+      },
+      "dependsOn": [
+        "db",
+        "broker"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/paperless_data",
+          "containerPath": "/usr/src/paperless/data"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/paperless_media",
+          "containerPath": "/usr/src/paperless/media"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/paperless_export",
+          "containerPath": "/usr/src/paperless/export"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/paperless_consume",
+          "containerPath": "/usr/src/paperless/consume"
+        }
+      ]
+    },
+    {
+      "name": "broker",
+      "image": "docker.io/library/redis:7",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/redis",
+          "containerPath": "/data"
+        }
+      ]
+    },
+    {
+      "name": "db",
+      "image": "docker.io/library/postgres:17",
+      "environment": {
+        "POSTGRES_DB": "paperless",
+        "POSTGRES_USER": "paperless",
+        "POSTGRES_PASSWORD": "paperless"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    },
+    {
+      "name": "gotenberg",
+      "image": "docker.io/gotenberg/gotenberg:8.12",
+      "command": [
+        "gotenberg",
+        "--chromium-disable-javascript=true",
+        "--chromium-allow-list=file:///tmp/.*"
+      ]
+    },
+    {
+      "name": "tika",
+      "image": "ghcr.io/paperless-ngx/tika:latest"
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  paperless-ngx:
+    container_name: paperless-ngx
+    image: ghcr.io/paperless-ngx/paperless-ngx:2.13.0
+    restart: unless-stopped
+    depends_on:
+    - db
+    - broker
+    ports:
+    - ${APP_PORT}:8000
+    volumes:
+    - ${APP_DATA_DIR}/data/paperless_data:/usr/src/paperless/data
+    - ${APP_DATA_DIR}/data/paperless_media:/usr/src/paperless/media
+    - ${APP_DATA_DIR}/data/paperless_export:/usr/src/paperless/export
+    - ${APP_DATA_DIR}/data/paperless_consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USERNAME}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_TIKA_ENABLED: ${PAPERLESS_TIKA_ENABLED}
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+      PAPERLESS_URL: ${APP_PROTOCOL:-http}://${APP_DOMAIN}
+      COMPOSE_PROJECT_NAME: paperless-ngx
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: https://paperless-ngx.${LOCAL_DOMAIN},https://${APP_DOMAIN},http://${INTERNAL_IP}:${APP_PORT}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.paperless-ngx-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.paperless-ngx.loadbalancer.server.port: 8000
+      traefik.http.routers.paperless-ngx-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.paperless-ngx-insecure.entrypoints: web
+      traefik.http.routers.paperless-ngx-insecure.service: paperless-ngx
+      traefik.http.routers.paperless-ngx-insecure.middlewares: paperless-ngx-web-redirect
+      traefik.http.routers.paperless-ngx.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.paperless-ngx.entrypoints: websecure
+      traefik.http.routers.paperless-ngx.service: paperless-ngx
+      traefik.http.routers.paperless-ngx.tls.certresolver: myresolver
+      traefik.http.routers.paperless-ngx-local-insecure.rule: Host(`paperless-ngx.${LOCAL_DOMAIN}`)
+      traefik.http.routers.paperless-ngx-local-insecure.entrypoints: web
+      traefik.http.routers.paperless-ngx-local-insecure.service: paperless-ngx
+      traefik.http.routers.paperless-ngx-local-insecure.middlewares: paperless-ngx-web-redirect
+      traefik.http.routers.paperless-ngx-local.rule: Host(`paperless-ngx.${LOCAL_DOMAIN}`)
+      traefik.http.routers.paperless-ngx-local.entrypoints: websecure
+      traefik.http.routers.paperless-ngx-local.service: paperless-ngx
+      traefik.http.routers.paperless-ngx-local.tls: true
+      runtipi.managed: true
+  broker:
+    image: docker.io/library/redis:7
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/redis:/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  db:
+    image: docker.io/library/postgres:17
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  gotenberg:
+    image: docker.io/gotenberg/gotenberg:8.12
+    restart: unless-stopped
+    command:
+    - gotenberg
+    - --chromium-disable-javascript=true
+    - --chromium-allow-list=file:///tmp/.*
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  tika:
+    image: ghcr.io/paperless-ngx/tika:latest
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
