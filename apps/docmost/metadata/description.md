@@ -1,26 +1,123 @@
-## Docmost
 
-Welcome to **Docmost** , an open-source collaborative wiki and documentation software.
-Designed for seamless real-time collaboration, multiple users can work on the same page at the same time in real-time without overwriting each other.
-
-Docmost is an open-source alternative to the likes of Notion and Confluence. Whether you're managing a wiki, a knowledge base, or extensive project documentation, Docmost provides the tools you need to create, collaborate, and share knowledge effortlessly.
-
-Docmost has support for Spaces. You can create Spaces for different teams, projects, or departments depending on your needs. Each Space comes with its own permissions.
-
-The rich text editor has support for markdown shortcuts.
-
-### Features
-
-- **Collaborative Real-time Editor** : Work together on pages in real-time.
-- **Spaces** : Organize your pages by team, projects, or departments for better collaboration.
-- **Permissions Management** : Easily control access to contents with easy to understand permissions.
-- **Groups** : Easily grant unified permissions to users via groups.
-- **Comments** : Add comments to pages for better communication and feedback.
-- **Page History** : Track changes with a comprehensive version history.
-- **Nested Navigation** : You can nest and reorder pages via the sidebar.
-- **Search** : Quickly find the information you need with powerful search capabilities.
-- **File Attachment** : Attach files to your pages for easy reference and sharing.
-
-### Authentication
-
-Currently, Docmost supports local email and password authentication only. Other authentication strategies will come in the near future.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "docmost",
+      "image": "docmost/docmost:0.4.1",
+      "isMain": true,
+      "internalPort": 3000,
+      "environment": {
+        "APP_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
+        "APP_SECRET": "${DOCMOST_APP_SECRET}",
+        "DATABASE_URL": "postgresql://docmost:${DOCMOST_PG_PASSWORD}@docmost-db:5432/docmost?schema",
+        "REDIS_URL": "redis://docmost-redis:6379"
+      },
+      "dependsOn": [
+        "docmost-db",
+        "docmost-redis"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/storage",
+          "containerPath": "/app/data/storage"
+        }
+      ]
+    },
+    {
+      "name": "docmost-db",
+      "image": "postgres:16-alpine",
+      "environment": {
+        "POSTGRES_DB": "docmost",
+        "POSTGRES_USER": "docmost",
+        "POSTGRES_PASSWORD": "${DOCMOST_PG_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgresql",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    },
+    {
+      "name": "docmost-redis",
+      "image": "redis:7.2-alpine",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/redis",
+          "containerPath": "/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  docmost:
+    container_name: docmost
+    image: docmost/docmost:0.4.1
+    depends_on:
+    - docmost-db
+    - docmost-redis
+    networks:
+    - tipi_main_network
+    environment:
+    - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
+    - APP_SECRET=${DOCMOST_APP_SECRET}
+    - DATABASE_URL=postgresql://docmost:${DOCMOST_PG_PASSWORD}@docmost-db:5432/docmost?schema=public
+    - REDIS_URL=redis://docmost-redis:6379
+    ports:
+    - ${APP_PORT}:3000
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/storage:/app/data/storage
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.docmost-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.docmost.loadbalancer.server.port: 3000
+      traefik.http.routers.docmost-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.docmost-insecure.entrypoints: web
+      traefik.http.routers.docmost-insecure.service: docmost
+      traefik.http.routers.docmost-insecure.middlewares: docmost-web-redirect
+      traefik.http.routers.docmost.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.docmost.entrypoints: websecure
+      traefik.http.routers.docmost.service: docmost
+      traefik.http.routers.docmost.tls.certresolver: myresolver
+      traefik.http.routers.docmost-local-insecure.rule: Host(`docmost.${LOCAL_DOMAIN}`)
+      traefik.http.routers.docmost-local-insecure.entrypoints: web
+      traefik.http.routers.docmost-local-insecure.service: docmost
+      traefik.http.routers.docmost-local-insecure.middlewares: docmost-web-redirect
+      traefik.http.routers.docmost-local.rule: Host(`docmost.${LOCAL_DOMAIN}`)
+      traefik.http.routers.docmost-local.entrypoints: websecure
+      traefik.http.routers.docmost-local.service: docmost
+      traefik.http.routers.docmost-local.tls: true
+      runtipi.managed: true
+  docmost-db:
+    container_name: docmost-db
+    image: postgres:16-alpine
+    environment:
+    - POSTGRES_DB=docmost
+    - POSTGRES_USER=docmost
+    - POSTGRES_PASSWORD=${DOCMOST_PG_PASSWORD}
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/postgresql:/var/lib/postgresql/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  docmost-redis:
+    container_name: docmost-redis
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/redis:/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
