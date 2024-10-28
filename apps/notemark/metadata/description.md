@@ -1,19 +1,97 @@
-# Note Mark
 
-Note Mark is a lighting fast and minimal; web-based Markdown notes app. Featuring a sleek and responsive web UI.
-
-## Features
-- Markdown (GitHub Flavored Markdown, see spec [here](https://github.github.com/gfm/))
-- HTML sanitisation, minimizing XSS attacks
-- Mobile Friendly
-- Friendly "Slug" based URLs for cleaner links
-- Dark & Light Theme
-- Notebook Sharing
-- Custom flat-file based storage system (easy to backup and synchronize)
-- Multiple views for a note (rendered, plain)
-- Editor with shortcuts
-
-## Docs
-Documentation is available here: [notemark.docs.enchantedcode.co.uk](https://notemark.docs.enchantedcode.co.uk/).
-
-> Checkout [here](https://github.com/enchant97/note-mark/issues/47) for the roadmap.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "notemark",
+      "image": "ghcr.io/enchant97/note-mark-frontend:0.14.1",
+      "isMain": true
+    },
+    {
+      "name": "notemark-backend",
+      "image": "ghcr.io/enchant97/note-mark-backend:0.14.1",
+      "environment": {
+        "JWT_SECRET": "${NOTEMARK_SERVICE_SECRET}",
+        "CORS_ORIGINS": "*"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/data"
+        }
+      ]
+    },
+    {
+      "name": "notemark-proxy",
+      "image": "nginx:alpine",
+      "internalPort": 80,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/proxy/nginx.conf",
+          "containerPath": "/etc/nginx/conf.d/default.conf",
+          "readOnly": true
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  notemark:
+    image: ghcr.io/enchant97/note-mark-frontend:0.14.1
+    container_name: notemark
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  notemark-backend:
+    image: ghcr.io/enchant97/note-mark-backend:0.14.1
+    container_name: notemark-backend
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    volumes:
+    - ${APP_DATA_DIR}/data:/data
+    environment:
+      JWT_SECRET: ${NOTEMARK_SERVICE_SECRET}
+      CORS_ORIGINS: '*'
+    labels:
+      runtipi.managed: true
+  notemark-proxy:
+    container_name: notemark-proxy
+    image: nginx:alpine
+    ports:
+    - ${APP_PORT}:80
+    volumes:
+    - ${APP_DATA_DIR}/data/proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.notemark-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.notemark.loadbalancer.server.port: 80
+      traefik.http.routers.notemark-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.notemark-insecure.entrypoints: web
+      traefik.http.routers.notemark-insecure.service: notemark
+      traefik.http.routers.notemark-insecure.middlewares: notemark-web-redirect
+      traefik.http.routers.notemark.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.notemark.entrypoints: websecure
+      traefik.http.routers.notemark.service: notemark
+      traefik.http.routers.notemark.tls.certresolver: myresolver
+      traefik.http.routers.notemark-local-insecure.rule: Host(`notemark.${LOCAL_DOMAIN}`)
+      traefik.http.routers.notemark-local-insecure.entrypoints: web
+      traefik.http.routers.notemark-local-insecure.service: notemark
+      traefik.http.routers.notemark-local-insecure.middlewares: notemark-web-redirect
+      traefik.http.routers.notemark-local.rule: Host(`notemark.${LOCAL_DOMAIN}`)
+      traefik.http.routers.notemark-local.entrypoints: websecure
+      traefik.http.routers.notemark-local.service: notemark
+      traefik.http.routers.notemark-local.tls: true
+      runtipi.managed: true
+ 
+```
