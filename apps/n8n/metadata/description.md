@@ -1,12 +1,66 @@
-This version of n8n is deprecated. Please use the latest version of n8n found in the app store. If you need to migrate your data, please follow the [migration guide](https://docs.n8n.io/1-0-migration-checklist/).
 
-## Installation Notes
-
-To enable OAUTH integrations you will need to enable the "expose app" option and configure a URL in Tipi. This setting can be changed at a later date if an integration is identified that needs it.
-
-## Easily automate tasks across different services.
-
-n8n is an extendable workflow automation tool. With a fair-code distribution model, n8n will always have visible source code, be available to self-host, and allow you to add your own custom functions, logic and apps. n8n's node-based approach makes it highly
-versatile, enabling you to connect anything to everything.
-
-![Screenshot](https://raw.githubusercontent.com/n8n-io/n8n/master/assets/n8n-screenshot.png)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "n8n",
+      "image": "n8nio/n8n:0.237.0",
+      "isMain": true,
+      "internalPort": 5678,
+      "environment": {
+        "N8N_EDITOR_BASE_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
+        "WEBHOOK_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/n8n",
+          "containerPath": "/home/node/.n8n"
+        }
+      ],
+      "command": "/bin/sh -c \"sleep 5; n8n start\""
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:0.237.0
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:5678
+    volumes:
+    - ${APP_DATA_DIR}/data/n8n:/home/node/.n8n
+    command: /bin/sh -c "sleep 5; n8n start"
+    environment:
+    - N8N_EDITOR_BASE_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
+    - WEBHOOK_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.n8n-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.n8n.loadbalancer.server.port: 5678
+      traefik.http.routers.n8n-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.n8n-insecure.entrypoints: web
+      traefik.http.routers.n8n-insecure.service: n8n
+      traefik.http.routers.n8n-insecure.middlewares: n8n-web-redirect
+      traefik.http.routers.n8n.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.n8n.entrypoints: websecure
+      traefik.http.routers.n8n.service: n8n
+      traefik.http.routers.n8n.tls.certresolver: myresolver
+      traefik.http.routers.n8n-local-insecure.rule: Host(`n8n.${LOCAL_DOMAIN}`)
+      traefik.http.routers.n8n-local-insecure.entrypoints: web
+      traefik.http.routers.n8n-local-insecure.service: n8n
+      traefik.http.routers.n8n-local-insecure.middlewares: n8n-web-redirect
+      traefik.http.routers.n8n-local.rule: Host(`n8n.${LOCAL_DOMAIN}`)
+      traefik.http.routers.n8n-local.entrypoints: websecure
+      traefik.http.routers.n8n-local.service: n8n
+      traefik.http.routers.n8n-local.tls: true
+      runtipi.managed: true
+ 
+```
