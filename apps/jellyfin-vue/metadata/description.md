@@ -1,15 +1,49 @@
-# Important Info
 
-- This is a beta build of the new Jellyfin Vue UI. You still need an exisiting Jellyfin server. T
-- This will have bugs and Issues, as its a Beta, Unstable Build.
-
-
-# Jellyfin Vue
-
-### Part of the [Jellyfin Project](https://jellyfin.org)
-
-___
-
-[![Logo Banner](https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/banner-logo-solid.svg?sanitize=true)](https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/banner-logo-solid.svg?sanitize=true)
-
-This is an alternative client for Jellyfin based on Vue.js. It might not be feature complete and it's constantly evolving.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "jellyfin-vue",
+      "image": "ghcr.io/jellyfin/jellyfin-vue:unstable.2023-09-18.fe0f640",
+      "isMain": true,
+      "internalPort": 80
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3'
+services:
+  jellyfin-vue:
+    container_name: jellyfin-vue
+    image: ghcr.io/jellyfin/jellyfin-vue:unstable.2023-09-18.fe0f640
+    ports:
+    - ${APP_PORT}:80
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.jellyfin-vue-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.jellyfin-vue.loadbalancer.server.port: 80
+      traefik.http.routers.jellyfin-vue-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.jellyfin-vue-insecure.entrypoints: web
+      traefik.http.routers.jellyfin-vue-insecure.service: jellyfin-vue
+      traefik.http.routers.jellyfin-vue-insecure.middlewares: jellyfin-vue-web-redirect
+      traefik.http.routers.jellyfin-vue.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.jellyfin-vue.entrypoints: websecure
+      traefik.http.routers.jellyfin-vue.service: jellyfin-vue
+      traefik.http.routers.jellyfin-vue.tls.certresolver: myresolver
+      traefik.http.routers.jellyfin-vue-local-insecure.rule: Host(`jellyfin-vue.${LOCAL_DOMAIN}`)
+      traefik.http.routers.jellyfin-vue-local-insecure.entrypoints: web
+      traefik.http.routers.jellyfin-vue-local-insecure.service: jellyfin-vue
+      traefik.http.routers.jellyfin-vue-local-insecure.middlewares: jellyfin-vue-web-redirect
+      traefik.http.routers.jellyfin-vue-local.rule: Host(`jellyfin-vue.${LOCAL_DOMAIN}`)
+      traefik.http.routers.jellyfin-vue-local.entrypoints: websecure
+      traefik.http.routers.jellyfin-vue-local.service: jellyfin-vue
+      traefik.http.routers.jellyfin-vue-local.tls: true
+      runtipi.managed: true
+ 
+```
