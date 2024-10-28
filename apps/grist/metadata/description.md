@@ -1,5 +1,64 @@
-# Grist is the evolution of spreadsheets
 
-Grist is a modern relational spreadsheet. It combines the flexibility of a spreadsheet with the robustness of a database to organize your data and make you more productive.
-
-https://user-images.githubusercontent.com/118367/151245587-892e50a6-41f5-4b74-9786-fe3566f6b1fb.mp4
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "grist",
+      "image": "gristlabs/grist:1.2.0",
+      "isMain": true,
+      "internalPort": 8484,
+      "environment": {
+        "APP_HOME_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
+        "GRIST_SANDBOX_FLAVOR": "${GRIST_SANDBOX_FLAVOR}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/grist-data",
+          "containerPath": "/persist"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '2.1'
+services:
+  grist:
+    container_name: grist
+    environment:
+    - APP_HOME_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
+    - GRIST_SANDBOX_FLAVOR=${GRIST_SANDBOX_FLAVOR}
+    image: gristlabs/grist:1.2.0
+    ports:
+    - ${APP_PORT}:8484
+    restart: always
+    volumes:
+    - ${APP_DATA_DIR}/data/grist-data:/persist
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.grist-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.grist.loadbalancer.server.port: 8484
+      traefik.http.routers.grist-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.grist-insecure.entrypoints: web
+      traefik.http.routers.grist-insecure.service: grist
+      traefik.http.routers.grist-insecure.middlewares: grist-web-redirect
+      traefik.http.routers.grist.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.grist.entrypoints: websecure
+      traefik.http.routers.grist.service: grist
+      traefik.http.routers.grist.tls.certresolver: myresolver
+      traefik.http.routers.grist-local-insecure.rule: Host(`grist.${LOCAL_DOMAIN}`)
+      traefik.http.routers.grist-local-insecure.entrypoints: web
+      traefik.http.routers.grist-local-insecure.service: grist
+      traefik.http.routers.grist-local-insecure.middlewares: grist-web-redirect
+      traefik.http.routers.grist-local.rule: Host(`grist.${LOCAL_DOMAIN}`)
+      traefik.http.routers.grist-local.entrypoints: websecure
+      traefik.http.routers.grist-local.service: grist
+      traefik.http.routers.grist-local.tls: true
+      runtipi.managed: true
+ 
+```
