@@ -10,6 +10,7 @@
           "hostPort": 6881,
           "containerPort": 6881,
           "udp": true
+          "tcp": true
         }
       ],
       "environment": {
