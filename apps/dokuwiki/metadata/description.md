@@ -1,8 +1,61 @@
-DokuWiki - Documentation Wiki Platform
-======================================
 
-`DokuWiki`_ is wiki software aimed at small companies documentation
-needs. It works on plain text files and thus needs no database. It has a
-simple but powerful syntax (similar to the one used by MediaWiki) which
-makes sure the data files remain readable outside the wiki and eases the
-creation of structured texts.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "dokuwiki",
+      "image": "lscr.io/linuxserver/dokuwiki:2022-07-31a-ls158",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3'
+services:
+  dokuwiki:
+    container_name: dokuwiki
+    image: lscr.io/linuxserver/dokuwiki:2022-07-31a-ls158
+    ports:
+    - ${APP_PORT}:80
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    environment:
+    - TZ=${TZ}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.dokuwiki-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.dokuwiki.loadbalancer.server.port: 80
+      traefik.http.routers.dokuwiki-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.dokuwiki-insecure.entrypoints: web
+      traefik.http.routers.dokuwiki-insecure.service: dokuwiki
+      traefik.http.routers.dokuwiki-insecure.middlewares: dokuwiki-web-redirect
+      traefik.http.routers.dokuwiki.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.dokuwiki.entrypoints: websecure
+      traefik.http.routers.dokuwiki.service: dokuwiki
+      traefik.http.routers.dokuwiki.tls.certresolver: myresolver
+      traefik.http.routers.dokuwiki-local-insecure.rule: Host(`dokuwiki.${LOCAL_DOMAIN}`)
+      traefik.http.routers.dokuwiki-local-insecure.entrypoints: web
+      traefik.http.routers.dokuwiki-local-insecure.service: dokuwiki
+      traefik.http.routers.dokuwiki-local-insecure.middlewares: dokuwiki-web-redirect
+      traefik.http.routers.dokuwiki-local.rule: Host(`dokuwiki.${LOCAL_DOMAIN}`)
+      traefik.http.routers.dokuwiki-local.entrypoints: websecure
+      traefik.http.routers.dokuwiki-local.service: dokuwiki
+      traefik.http.routers.dokuwiki-local.tls: true
+      runtipi.managed: true
+ 
+```
