@@ -1,36 +1,82 @@
-# Default credentials
 
-Username: admin
-Password: deluge
-
----
-
-# Folder Info
-
-| Root Folder                                  | Container Folder |
-|----------------------------------------------|------------------|
-| /runtipi/app-data/deluge/data/deluge/config	 | /config          |
-| /runtipi/media/torrents                 | /media/torrents       |
-
----
-
-# [linuxserver/deluge](https://github.com/linuxserver/docker-deluge)
-
-[Deluge](http://deluge-torrent.org/) is a lightweight, Free Software, cross-platform BitTorrent client.
-
-- Full Encryption
-- WebUI
-- Plugin System
-- Much more...
-
-## [](https://github.com/linuxserver/docker-deluge#supported-architectures)Supported Architectures
-
-We utilise the docker manifest for multi-platform awareness. More information is available from docker [here](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md#manifest-list) and our announcement [here](https://blog.linuxserver.io/2019/02/21/the-lsio-pipeline-project/).
-
-Simply pulling `lscr.io/linuxserver/deluge:latest` should retrieve the correct image for your arch, but you can also pull specific arch images via tags.
-
-## [](https://github.com/linuxserver/docker-deluge#application-setup)Application Setup
-
-The admin interface is available at `http://SERVER-IP:8112` with a default user/password of admin/deluge.
-
-To change the password (recommended) log in to the web interface and go to Preferences->Interface->Password.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "deluge",
+      "image": "lscr.io/linuxserver/deluge:2.1.1",
+      "isMain": true,
+      "internalPort": 8112,
+      "addPorts": [
+        {
+          "hostPort": 6881,
+          "containerPort": 6881,
+          "udp": true
+        }
+      ],
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}",
+        "DELUGE_LOGLEVEL": "error"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/deluge/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/torrents",
+          "containerPath": "/media/torrents"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '2.1'
+services:
+  deluge:
+    image: lscr.io/linuxserver/deluge:2.1.1
+    container_name: deluge
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    - DELUGE_LOGLEVEL=error
+    volumes:
+    - ${APP_DATA_DIR}/data/deluge/config:/config
+    - ${ROOT_FOLDER_HOST}/media/torrents:/media/torrents
+    ports:
+    - ${APP_PORT}:8112
+    - 6881:6881
+    - 6881:6881/udp
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.deluge-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.deluge.loadbalancer.server.port: 8112
+      traefik.http.routers.deluge-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.deluge-insecure.entrypoints: web
+      traefik.http.routers.deluge-insecure.service: deluge
+      traefik.http.routers.deluge-insecure.middlewares: deluge-web-redirect
+      traefik.http.routers.deluge.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.deluge.entrypoints: websecure
+      traefik.http.routers.deluge.service: deluge
+      traefik.http.routers.deluge.tls.certresolver: myresolver
+      traefik.http.routers.deluge-local-insecure.rule: Host(`deluge.${LOCAL_DOMAIN}`)
+      traefik.http.routers.deluge-local-insecure.entrypoints: web
+      traefik.http.routers.deluge-local-insecure.service: deluge
+      traefik.http.routers.deluge-local-insecure.middlewares: deluge-web-redirect
+      traefik.http.routers.deluge-local.rule: Host(`deluge.${LOCAL_DOMAIN}`)
+      traefik.http.routers.deluge-local.entrypoints: websecure
+      traefik.http.routers.deluge-local.service: deluge
+      traefik.http.routers.deluge-local.tls: true
+      runtipi.managed: true
+ 
+```
