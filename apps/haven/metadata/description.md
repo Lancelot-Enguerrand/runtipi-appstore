@@ -1,15 +1,137 @@
-[Haven](https://havenweb.org) is a private blog application built with Ruby on Rails. Write what you want, create accounts for people you want to share with, keep up with each other using built-in RSS.
 
-Try out a live demo at https://havenweb.org/demo.html
-
-The following are some motivating philosophies:
-
-* Open-source. MIT License
-* Privacy-first.  This is for sharing with friends and family, not commercial endevors.  If you want a blog for your company, you probably want to use WordPress or Ghost instead.
-* Easy to use.  Built-in web interface for managing users, customizing the blog, and writing/editing posts with markdown and live-preview.
-* Low-bandwidth friendly.  Images get downscaled to reduce page load times.  No javascript frameworks.  No ads or trackers.
-* Customizable.  Add custom CSS or fonts.
-* No spam. There is no self-signup for users so there is no place for unauthorized users to impact your life.
-* Media support for images, videos, and audio.
-* Private RSS feeds for your friends to follow you.
-* Build-in RSS reader to follow your favorite blogs.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "haven",
+      "image": "ghcr.io/havenweb/haven:latest",
+      "isMain": true,
+      "internalPort": 3000,
+      "environment": {
+        "RAILS_ENV": "production",
+        "HAVEN_DB_HOST": "haven-db",
+        "HAVEN_DB_NAME": "haven",
+        "HAVEN_DB_ROLE": "haven",
+        "HAVEN_DB_PASSWORD": "${HAVEN_DB_PASSWORD}",
+        "HAVEN_USER_EMAIL": "${HAVEN_USER_EMAIL}",
+        "HAVEN_USER_PASS": "${HAVEN_USER_PASSWORD}"
+      },
+      "dependsOn": [
+        "haven-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/storage",
+          "containerPath": "/storage"
+        }
+      ]
+    },
+    {
+      "name": "haven-db",
+      "image": "postgres:13.2-alpine",
+      "environment": {
+        "POSTGRES_HOST_AUTH_METHOD": "trust",
+        "POSTGRES_USER": "haven"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "command": [
+        "postgres",
+        "-c",
+        "max_connections=1000",
+        "-c",
+        "synchronous_commit=off",
+        "-c",
+        "fsync=off",
+        "-c",
+        "full_page_writes=off",
+        "-c",
+        "max_wal_size=4GB",
+        "-c",
+        "checkpoint_timeout=30min",
+        "-c",
+        "wal_level=logical"
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  haven:
+    image: ghcr.io/havenweb/haven:latest
+    container_name: haven
+    depends_on:
+    - haven-db
+    ports:
+    - ${APP_PORT}:3000
+    volumes:
+    - ${APP_DATA_DIR}/data/storage:/storage
+    environment:
+    - RAILS_ENV=production
+    - HAVEN_DB_HOST=haven-db
+    - HAVEN_DB_NAME=haven
+    - HAVEN_DB_ROLE=haven
+    - HAVEN_DB_PASSWORD=${HAVEN_DB_PASSWORD}
+    - HAVEN_USER_EMAIL=${HAVEN_USER_EMAIL}
+    - HAVEN_USER_PASS=${HAVEN_USER_PASSWORD}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.haven-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.haven.loadbalancer.server.port: 3000
+      traefik.http.routers.haven-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.haven-insecure.entrypoints: web
+      traefik.http.routers.haven-insecure.service: haven
+      traefik.http.routers.haven-insecure.middlewares: haven-web-redirect
+      traefik.http.routers.haven.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.haven.entrypoints: websecure
+      traefik.http.routers.haven.service: haven
+      traefik.http.routers.haven.tls.certresolver: myresolver
+      traefik.http.routers.haven-local-insecure.rule: Host(`haven.${LOCAL_DOMAIN}`)
+      traefik.http.routers.haven-local-insecure.entrypoints: web
+      traefik.http.routers.haven-local-insecure.service: haven
+      traefik.http.routers.haven-local-insecure.middlewares: haven-web-redirect
+      traefik.http.routers.haven-local.rule: Host(`haven.${LOCAL_DOMAIN}`)
+      traefik.http.routers.haven-local.entrypoints: websecure
+      traefik.http.routers.haven-local.service: haven
+      traefik.http.routers.haven-local.tls: true
+      runtipi.managed: true
+  haven-db:
+    image: postgres:13.2-alpine
+    container_name: haven-db
+    command:
+    - postgres
+    - -c
+    - max_connections=1000
+    - -c
+    - synchronous_commit=off
+    - -c
+    - fsync=off
+    - -c
+    - full_page_writes=off
+    - -c
+    - max_wal_size=4GB
+    - -c
+    - checkpoint_timeout=30min
+    - -c
+    - wal_level=logical
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: haven
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
