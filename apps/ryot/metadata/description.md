@@ -1,37 +1,96 @@
-## Install Info
 
-If you want to setup Video Tracking, you need to set a Twitch Client ID and Secret. Please read the [Ryot Documentation](https://ignisda.github.io/ryot/guides/video-games.html) if you do not know how to get them
-# Ryot
-
-### A self hosted platform for tracking various facets of your life - media, fitness etc.
-
-Ryot (**R**oll **Y**our **O**wn **T**racker), pronounced "riot", aims to be the only self hosted tracker you will ever need!
-
-## 💻 Demo
-
-You can use the demo instance hosted on [Fly.io](https://ryot.fly.dev). Login and register with the username `demo` and password `demo-password`. This instance is automatically deployed from the latest release.
-
-**NOTE**: The data in this instance can be deleted randomly.
-
-## 📝 ELI5
-
-Imagine you have a special notebook where you can write down all the media you have consumed, like books you've read, shows you have watched, video games you have played or workouts you have done. Now, imagine that instead of a physical notebook, you have a special tool on your computer or phone that lets you keep track of all these digitally.
-
-## 💡 Why?
-
--   Existing solutions do not have very good UI.
--   Pretty graphs and summaries make everyone happy. Ryot aims to have a lot of them.
--   There is a lack of a good self-hosted fitness and health tracking solution.
--   Ryot consumes very little memory (around 10MB idle eyeballing `docker stats`)
-
-## 🚀 Features
-
--   ✅ [Supports](https://github.com/IgnisDa/ryot/discussions/4) tracking media and fitness
--   ✅ Import data from Goodreads, MediaTracker, Trakt, Movary, StoryGraph, MyAnimeList
--   ✅ Integration with Jellyfin, Kodi, Plex, Audiobookshelf
--   ✅ Self-hosted
--   ✅ PWA enabled
--   ✅ Documented GraphQL API
--   ✅ Easy to understand UI
--   ✅ Lightning fast (written in Rust BTW)
--   ✅ Free and open-source
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "ryot",
+      "image": "ghcr.io/ignisda/ryot:v2.24.2",
+      "isMain": true,
+      "internalPort": 8000,
+      "environment": {
+        "DATABASE_URL": "postgres://tipi:${RYOT_DB_PASSWORD}@ryot-db:5432/ryot",
+        "SERVER_INSECURE_COOKIE": "true",
+        "USERS_ALLOW_REGISTRATION": "${RYOT_ALLOW_REGISTRATION}",
+        "VIDEO_GAMES_TWITCH_CLIENT_ID": "${RYOT_VIDEO_GAMES_TWITCH_CLIENT_ID}",
+        "VIDEO_GAMES_TWITCH_CLIENT_SECRET": " ${VIDEO_GAMES_TWITCH_CLIENT_SECRET}"
+      },
+      "dependsOn": [
+        "ryot-db"
+      ]
+    },
+    {
+      "name": "ryot-db",
+      "image": "postgres:15-alpine",
+      "environment": {
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_PASSWORD": "${RYOT_DB_PASSWORD}",
+        "POSTGRES_DB": "ryot"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  ryot:
+    image: ghcr.io/ignisda/ryot:v2.24.2
+    container_name: ryot
+    environment:
+    - DATABASE_URL=postgres://tipi:${RYOT_DB_PASSWORD}@ryot-db:5432/ryot
+    - SERVER_INSECURE_COOKIE=true
+    - USERS_ALLOW_REGISTRATION=${RYOT_ALLOW_REGISTRATION}
+    - VIDEO_GAMES_TWITCH_CLIENT_ID=${RYOT_VIDEO_GAMES_TWITCH_CLIENT_ID}
+    - VIDEO_GAMES_TWITCH_CLIENT_SECRET= ${VIDEO_GAMES_TWITCH_CLIENT_SECRET}
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8000
+    depends_on:
+    - ryot-db
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.ryot-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.ryot.loadbalancer.server.port: 8000
+      traefik.http.routers.ryot-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.ryot-insecure.entrypoints: web
+      traefik.http.routers.ryot-insecure.service: ryot
+      traefik.http.routers.ryot-insecure.middlewares: ryot-web-redirect
+      traefik.http.routers.ryot.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.ryot.entrypoints: websecure
+      traefik.http.routers.ryot.service: ryot
+      traefik.http.routers.ryot.tls.certresolver: myresolver
+      traefik.http.routers.ryot-local-insecure.rule: Host(`ryot.${LOCAL_DOMAIN}`)
+      traefik.http.routers.ryot-local-insecure.entrypoints: web
+      traefik.http.routers.ryot-local-insecure.service: ryot
+      traefik.http.routers.ryot-local-insecure.middlewares: ryot-web-redirect
+      traefik.http.routers.ryot-local.rule: Host(`ryot.${LOCAL_DOMAIN}`)
+      traefik.http.routers.ryot-local.entrypoints: websecure
+      traefik.http.routers.ryot-local.service: ryot
+      traefik.http.routers.ryot-local.tls: true
+      runtipi.managed: true
+  ryot-db:
+    container_name: ryot-db
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+    - POSTGRES_USER=tipi
+    - POSTGRES_PASSWORD=${RYOT_DB_PASSWORD}
+    - POSTGRES_DB=ryot
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
