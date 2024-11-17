@@ -3,9 +3,10 @@
   "name": "Homarr",
   "available": true,
   "exposable": true,
+  "dynamic_config": true,
   "port": 8102,
   "id": "homarr",
-  "tipi_version": 33,
+  "tipi_version": 34,
   "version": "0.15.7",
   "categories": ["utilities"],
   "description": "A homepage for your server.",
@@ -25,5 +26,5 @@
   ],
   "supported_architectures": ["arm64", "amd64"],
   "created_at": 1691943801422,
-  "updated_at": 1730916980000
+  "updated_at": 1731851815356
 }
