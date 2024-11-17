@@ -4,9 +4,10 @@
   "available": true,
   "port": 8050,
   "exposable": true,
+  "dynamic_config": true,
   "id": "koillection",
   "description": "Koillection is a self-hosted service allowing users to manage any kind of collections.",
-  "tipi_version": 16,
+  "tipi_version": 17,
   "version": "1.5.14",
   "categories": ["utilities"],
   "short_desc": "Koillection allow you to manage any kind of collections.",
@@ -31,5 +32,5 @@
     }
   ],
   "created_at": 1691943801422,
-  "updated_at": 1730916717000
+  "updated_at": 1731851863636
 }
