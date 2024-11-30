@@ -1,3 +1,73 @@
-# ESP Home
 
-ESPHome is a system to control your microcontrollers by simple yet powerful configuration files and control them remotely through Home Automation systems.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "esphome",
+      "image": "ghcr.io/esphome/esphome:2024.11.2",
+      "isMain": true,
+      "internalPort": 6052,
+      "environment": {
+        "TZ": "${TZ}",
+        "USERNAME": "${ESPHOME_USERNAME:-''}",
+        "PASSWORD": "${ESPHOME_PASSWORD:-''}",
+        "ESPHOME_DASHBOARD_USE_PING": "${ESPHOME_PING:-'false'}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  esphome:
+    image: ghcr.io/esphome/esphome:2024.11.2
+    container_name: esphome
+    environment:
+    - TZ=${TZ}
+    - USERNAME=${ESPHOME_USERNAME:-''}
+    - PASSWORD=${ESPHOME_PASSWORD:-''}
+    - ESPHOME_DASHBOARD_USE_PING=${ESPHOME_PING:-'false'}
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:6052
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data/config:/config
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.esphome-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.esphome.loadbalancer.server.port: 6052
+      traefik.http.routers.esphome-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.esphome-insecure.entrypoints: web
+      traefik.http.routers.esphome-insecure.service: esphome
+      traefik.http.routers.esphome-insecure.middlewares: esphome-web-redirect
+      traefik.http.routers.esphome.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.esphome.entrypoints: websecure
+      traefik.http.routers.esphome.service: esphome
+      traefik.http.routers.esphome.tls.certresolver: myresolver
+      traefik.http.routers.esphome-local-insecure.rule: Host(`esphome.${LOCAL_DOMAIN}`)
+      traefik.http.routers.esphome-local-insecure.entrypoints: web
+      traefik.http.routers.esphome-local-insecure.service: esphome
+      traefik.http.routers.esphome-local-insecure.middlewares: esphome-web-redirect
+      traefik.http.routers.esphome-local.rule: Host(`esphome.${LOCAL_DOMAIN}`)
+      traefik.http.routers.esphome-local.entrypoints: websecure
+      traefik.http.routers.esphome-local.service: esphome
+      traefik.http.routers.esphome-local.tls: true
+      runtipi.managed: true
+ 
+```
