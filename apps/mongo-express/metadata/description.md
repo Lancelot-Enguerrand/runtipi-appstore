@@ -1,20 +1,64 @@
-## mongo-express
 
-A web-based MongoDB admin interface written with Node.js, Express, and Bootstrap3
-
-### Features
-- Connect to multiple databases
-- View/add/delete databases
-- View/add/rename/delete collections
-- View/add/update/delete documents
-- Preview audio/video/image assets inline in the collection view
-- Nested and/or large objects are collapsible for easy overview
-- Async on-demand loading of big document properties (>100KB default) to keep collection view fast
-- GridFS support - add/get/delete incredibly large files
-- Use BSON data types in documents
-- Mobile / Responsive - Bootstrap 3 works passably on small screens when you're in a bind
-- Connect and authenticate to individual databases
-- Authenticate as admin to view all databases
-- Database blacklist/whitelist
-- Custom CA and CA validation disabling
-- Supports replica sets
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "mongo-express",
+      "image": "mongo-express:1.0.2",
+      "isMain": true,
+      "internalPort": 8081,
+      "environment": {
+        "ME_CONFIG_MONGODB_SERVER": "${ME_CONFIG_MONGODB_SERVERIP}",
+        "ME_CONFIG_MONGODB_ENABLE_ADMIN": "true",
+        "ME_CONFIG_MONGODB_ADMINUSERNAME": "${ME_CONFIG_MONGODB_ADMINUSERNAME}",
+        "ME_CONFIG_MONGODB_ADMINPASSWORD": "${ME_CONFIG_MONGODB_ADMINPASSWORD}",
+        "ME_CONFIG_BASICAUTH_USERNAME": "${ME_CONFIG_BASICAUTH_USERNAME}",
+        "ME_CONFIG_BASICAUTH_PASSWORD": "${ME_CONFIG_BASICAUTH_PASSWORD}"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.8'
+services:
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express:1.0.2
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8081
+    networks:
+    - tipi_main_network
+    environment:
+    - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVERIP}
+    - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+    - ME_CONFIG_MONGODB_ADMINUSERNAME=${ME_CONFIG_MONGODB_ADMINUSERNAME}
+    - ME_CONFIG_MONGODB_ADMINPASSWORD=${ME_CONFIG_MONGODB_ADMINPASSWORD}
+    - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
+    - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.mongo-express-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.mongo-express.loadbalancer.server.port: 8081
+      traefik.http.routers.mongo-express-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mongo-express-insecure.entrypoints: web
+      traefik.http.routers.mongo-express-insecure.service: mongo-express
+      traefik.http.routers.mongo-express-insecure.middlewares: mongo-express-web-redirect
+      traefik.http.routers.mongo-express.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mongo-express.entrypoints: websecure
+      traefik.http.routers.mongo-express.service: mongo-express
+      traefik.http.routers.mongo-express.tls.certresolver: myresolver
+      traefik.http.routers.mongo-express-local-insecure.rule: Host(`mongo-express.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mongo-express-local-insecure.entrypoints: web
+      traefik.http.routers.mongo-express-local-insecure.service: mongo-express
+      traefik.http.routers.mongo-express-local-insecure.middlewares: mongo-express-web-redirect
+      traefik.http.routers.mongo-express-local.rule: Host(`mongo-express.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mongo-express-local.entrypoints: websecure
+      traefik.http.routers.mongo-express-local.service: mongo-express
+      traefik.http.routers.mongo-express-local.tls: true
+      runtipi.managed: true
+ 
+```
