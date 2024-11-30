@@ -1,19 +1,67 @@
-# Kanboard
 
-Kanboard is a free and open source Kanban project management software.
-
-## Default credentials
-Username: admin
-Password: admin
-
-## Hint
-**Plugins currently not installable via Kanboard Web Interface**
-
-- Kanban Board
-- Visualize your work
-- Limit your work in progress to focus on your goal
-- Drag and drop tasks to manage your project
-
-![screenshot](https://kanboard.org/assets/img/board.png)
-
-Source: https://kanboard.org/
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "kanboard",
+      "image": "kanboard/kanboard:v1.2.42",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "PLUGIN_INSTALLER": "${PLUGIN_INSTALLER}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/kanboard_data",
+          "containerPath": "/var/www/app/data"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/kanboard_plugins",
+          "containerPath": "/var/www/app/plugins"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  kanboard:
+    container_name: kanboard
+    image: kanboard/kanboard:v1.2.42
+    environment:
+    - PLUGIN_INSTALLER=${PLUGIN_INSTALLER}
+    ports:
+    - ${APP_PORT}:80
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/kanboard_data:/var/www/app/data
+    - ${APP_DATA_DIR}/data/kanboard_plugins:/var/www/app/plugins
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.kanboard-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.kanboard.loadbalancer.server.port: 80
+      traefik.http.routers.kanboard-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.kanboard-insecure.entrypoints: web
+      traefik.http.routers.kanboard-insecure.service: kanboard
+      traefik.http.routers.kanboard-insecure.middlewares: kanboard-web-redirect
+      traefik.http.routers.kanboard.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.kanboard.entrypoints: websecure
+      traefik.http.routers.kanboard.service: kanboard
+      traefik.http.routers.kanboard.tls.certresolver: myresolver
+      traefik.http.routers.kanboard-local-insecure.rule: Host(`kanboard.${LOCAL_DOMAIN}`)
+      traefik.http.routers.kanboard-local-insecure.entrypoints: web
+      traefik.http.routers.kanboard-local-insecure.service: kanboard
+      traefik.http.routers.kanboard-local-insecure.middlewares: kanboard-web-redirect
+      traefik.http.routers.kanboard-local.rule: Host(`kanboard.${LOCAL_DOMAIN}`)
+      traefik.http.routers.kanboard-local.entrypoints: websecure
+      traefik.http.routers.kanboard-local.service: kanboard
+      traefik.http.routers.kanboard-local.tls: true
+      runtipi.managed: true
+ 
+```
