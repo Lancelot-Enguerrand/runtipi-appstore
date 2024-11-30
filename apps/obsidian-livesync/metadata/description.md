@@ -1,7 +1,69 @@
-## Obsidian LiveSync
 
-Self-hosted database for synchronizing Obsidian vaults.
-
-1. Install the **Self-hosted LiveSync** plugin from the [Obsidian Community Plugins](obsidian://show-plugin?id=obsidian-livesync) page.
-2. Connect to your server by entering the URL in the plugin settings using a domain name or IP address.
-3. If you are not exposing the app you have to use `http://<tipi-ip>:5984` as the URL.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "obsidian-livesync",
+      "image": "couchdb:3.1.2",
+      "isMain": true,
+      "internalPort": 5984,
+      "environment": {
+        "COUCHDB_USER": "${OBSIDIAN_LIVESYNC_USER}",
+        "COUCHDB_PASSWORD": "${OBSIDIAN_LIVESYNC_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/couchdb",
+          "containerPath": "/opt/couchdb/data"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/local.ini",
+          "containerPath": "/opt/couchdb/etc/local.ini"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  obsidian-livesync:
+    container_name: obsidian-livesync
+    image: couchdb:3.1.2
+    ports:
+    - ${OBSIDIAN_LIVESYNC_PORT:-${APP_PORT}}:5984
+    environment:
+    - COUCHDB_USER=${OBSIDIAN_LIVESYNC_USER}
+    - COUCHDB_PASSWORD=${OBSIDIAN_LIVESYNC_PASSWORD}
+    volumes:
+    - ${APP_DATA_DIR}/data/couchdb:/opt/couchdb/data
+    - ${APP_DATA_DIR}/data/local.ini:/opt/couchdb/etc/local.ini
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.obsidian-livesync-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.obsidian-livesync.loadbalancer.passhostheader: true
+      traefik.http.services.obsidian-livesync.loadbalancer.server.port: 5984
+      traefik.http.routers.obsidian-livesync-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.obsidian-livesync-insecure.entrypoints: web
+      traefik.http.routers.obsidian-livesync-insecure.service: obsidian-livesync
+      traefik.http.routers.obsidian-livesync-insecure.middlewares: obsidian-livesync-web-redirect
+      traefik.http.routers.obsidian-livesync.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.obsidian-livesync.entrypoints: websecure
+      traefik.http.routers.obsidian-livesync.service: obsidian-livesync
+      traefik.http.routers.obsidian-livesync.tls.certresolver: myresolver
+      traefik.http.routers.obsidian-livesync-local-insecure.rule: Host(`obsidian-livesync.${LOCAL_DOMAIN}`)
+      traefik.http.routers.obsidian-livesync-local-insecure.entrypoints: web
+      traefik.http.routers.obsidian-livesync-local-insecure.service: obsidian-livesync
+      traefik.http.routers.obsidian-livesync-local-insecure.middlewares: obsidian-livesync-web-redirect
+      traefik.http.routers.obsidian-livesync-local.rule: Host(`obsidian-livesync.${LOCAL_DOMAIN}`)
+      traefik.http.routers.obsidian-livesync-local.entrypoints: websecure
+      traefik.http.routers.obsidian-livesync-local.service: obsidian-livesync
+      traefik.http.routers.obsidian-livesync-local.tls: true
+      runtipi.managed: true
+ 
+```
