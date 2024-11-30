@@ -4,8 +4,9 @@
   "port": 8160,
   "available": true,
   "exposable": true,
+  "dynamic_config": true,
   "id": "grafana",
-  "tipi_version": 38,
+  "tipi_version": 39,
   "version": "11.3.1",
   "categories": ["data"],
   "description": "The open and composable observability and data visualization platform",
@@ -15,5 +16,5 @@
   "form_fields": [],
   "supported_architectures": ["arm64", "amd64"],
   "created_at": 1691943801422,
-  "updated_at": 1732050931000
+  "updated_at": 1732958875874
 }
