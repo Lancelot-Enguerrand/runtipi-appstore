@@ -1,17 +1,49 @@
-![Chatpad AI](https://raw.githubusercontent.com/deiucanta/chatpad/main/banner.png)
 
-## Premium quality UI for ChatGPT
-
-Recently, there has been a surge of UIs for ChatGPT, making it the new "to-do app" that everyone wants to try their hand at. Chatpad sets itself apart with a broader vision - to become the ultimate interface for ChatGPT users.
-
-### ⚡️ Free and open source
-
-This app is provided for free and the source code is available on GitHub.
-
-### 🔒 Privacy focused
-
-No tracking, no cookies, no bullshit. All your data is stored locally.
-
-### ✨ Best experience
-
-Crafted with love and care to provide the best experience possible.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "chatpad",
+      "image": "ghcr.io/deiucanta/chatpad:latest",
+      "isMain": true,
+      "internalPort": 80
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  chatpad:
+    image: ghcr.io/deiucanta/chatpad:latest
+    container_name: chatpad
+    ports:
+    - ${APP_PORT}:80
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.chatpad-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.chatpad.loadbalancer.server.port: 80
+      traefik.http.routers.chatpad-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.chatpad-insecure.entrypoints: web
+      traefik.http.routers.chatpad-insecure.service: chatpad
+      traefik.http.routers.chatpad-insecure.middlewares: chatpad-web-redirect
+      traefik.http.routers.chatpad.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.chatpad.entrypoints: websecure
+      traefik.http.routers.chatpad.service: chatpad
+      traefik.http.routers.chatpad.tls.certresolver: myresolver
+      traefik.http.routers.chatpad-local-insecure.rule: Host(`chatpad.${LOCAL_DOMAIN}`)
+      traefik.http.routers.chatpad-local-insecure.entrypoints: web
+      traefik.http.routers.chatpad-local-insecure.service: chatpad
+      traefik.http.routers.chatpad-local-insecure.middlewares: chatpad-web-redirect
+      traefik.http.routers.chatpad-local.rule: Host(`chatpad.${LOCAL_DOMAIN}`)
+      traefik.http.routers.chatpad-local.entrypoints: websecure
+      traefik.http.routers.chatpad-local.service: chatpad
+      traefik.http.routers.chatpad-local.tls: true
+      runtipi.managed: true
+ 
+```
