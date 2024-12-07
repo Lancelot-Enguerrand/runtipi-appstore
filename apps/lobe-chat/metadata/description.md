@@ -1,13 +1,60 @@
-# Lobe Chat
 
-LobeChat is an open-source, high-performance chatbot framework that supports
-speech synthesis, multimodal, and extensible
-([Function Call](https://platform.openai.com/docs/guides/function-calling)) plugin system.
-
-## Settings
-| Environment Variable | Required | Description | Example |
-| -------------------- | -------- | ------------| --------|
-| `OPENAI_API_KEY`     | Yes      | API key for OpenAI. You can generate it on [your OpenAI account page](https://platform.openai.com/api-keys). **Note:** Keep your `OPENAI_API_KEY` secure to prevent unauthorized access. | `sk-xxxxxx...xxxxxx` |
-| `OPENAI_PROXY_URL`   | No       | Override the default OpenAI API base URL for requests. **Caution:** Only use a trusted proxy to ensure the security of your data. | `https://api.chatanywhere.cn/v1`<br/>The default value is<br/>`https://api.openai.com/v1` |
-| `ACCESS_CODE`        | No       | Password to avoid leaking. If you want to have multiple passwords, use a comma separated list. **Security Best Practice:** Avoid storing passwords directly in environment variables. Use a secrets management service to protect sensitive information. | `awCTe)re_r74` or `rtrt_ewee3@09!` or `code1,code2,code3` |
-| `CUSTOM_MODELS`      | No       | Control the model list. Use `+` to add a model, `-` to hide a model, and `model_name=display_name` to customize the display name of a model, separated by commas. | `qwen-7b-chat,+glm-6b,-gpt-3.5-turbo` |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "lobe-chat",
+      "image": "lobehub/lobe-chat:v1.36.2",
+      "isMain": true,
+      "internalPort": 3210,
+      "environment": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OPENAI_PROXY_URL": "${OPEANAI_PROXY_URL}",
+        "CUSTOM_MODELS": "${CUSTOM_MODELS}",
+        "ACCESS_CODE": "${ACCESS_CODE}"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  lobe-chat:
+    container_name: lobe-chat
+    image: lobehub/lobe-chat:v1.36.2
+    environment:
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - OPENAI_PROXY_URL=${OPEANAI_PROXY_URL}
+    - CUSTOM_MODELS=${CUSTOM_MODELS}
+    - ACCESS_CODE=${ACCESS_CODE}
+    ports:
+    - ${APP_PORT}:3210
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.lobe-chat-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.lobe-chat.loadbalancer.server.port: 3210
+      traefik.http.routers.lobe-chat-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.lobe-chat-insecure.entrypoints: web
+      traefik.http.routers.lobe-chat-insecure.service: lobe-chat
+      traefik.http.routers.lobe-chat-insecure.middlewares: lobe-chat-web-redirect
+      traefik.http.routers.lobe-chat.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.lobe-chat.entrypoints: websecure
+      traefik.http.routers.lobe-chat.service: lobe-chat
+      traefik.http.routers.lobe-chat.tls.certresolver: myresolver
+      traefik.http.routers.lobe-chat-local-insecure.rule: Host(`lobe-chat.${LOCAL_DOMAIN}`)
+      traefik.http.routers.lobe-chat-local-insecure.entrypoints: web
+      traefik.http.routers.lobe-chat-local-insecure.service: lobe-chat
+      traefik.http.routers.lobe-chat-local-insecure.middlewares: lobe-chat-web-redirect
+      traefik.http.routers.lobe-chat-local.rule: Host(`lobe-chat.${LOCAL_DOMAIN}`)
+      traefik.http.routers.lobe-chat-local.entrypoints: websecure
+      traefik.http.routers.lobe-chat-local.service: lobe-chat
+      traefik.http.routers.lobe-chat-local.tls: true
+      runtipi.managed: true
+ 
+```
