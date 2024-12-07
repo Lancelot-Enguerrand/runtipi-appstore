@@ -1,20 +1,62 @@
-# Spacedrive
 
-Spacedrive is an open source cross-platform file manager, powered by a virtual distributed filesystem (VDFS) written in Rust.
-
-Organize files across many devices in one place. From cloud services to offline hard drives, Spacedrive combines the storage capacity and processing power of your devices into one personal distributed cloud, that is both secure and intuitive to use.
-
-For independent creatives, hoarders and those that want to own their digital footprint, Spacedrive provides a free file management experience like no other.
-
----
-
-![Spacedrive Interface](https://github.com/spacedriveapp/spacedrive/raw/main/apps/landing/public/github.webp?raw=true)
-
----
-
-
-## What is a VDFS?
-
-A VDFS (virtual distributed filesystem) is a filesystem designed to work across a variety of storage layers. With a uniform API to manipulate and access content across many devices, VDFS is not restricted to a single machine. It achieves this by maintaining a virtual index of all storage locations, synchronizing the database between clients in realtime. This implementation also uses CAS (Content-addressable storage) to uniquely identify files, while keeping record of logical file paths relative to the storage locations.
-
-The first implementation of a VDFS can be found in this UC Berkeley paper by Haoyuan Li. This paper describes its use for cloud computing, however the underlying concepts can be translated to open consumer software.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "spacedrive",
+      "image": "ghcr.io/spacedriveapp/spacedrive/server:0.4.2",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "SD_AUTH": "${SD_AUTH_USER}:${SD_AUTH_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/spacedrive",
+          "containerPath": "/var/spacedrive"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  spacedrive:
+    container_name: spacedrive
+    image: ghcr.io/spacedriveapp/spacedrive/server:0.4.2
+    restart: unless-stopped
+    environment:
+    - SD_AUTH=${SD_AUTH_USER}:${SD_AUTH_PASSWORD}
+    ports:
+    - ${APP_PORT}:8080
+    networks:
+    - tipi_main_network
+    volumes:
+    - ${APP_DATA_DIR}/data/spacedrive:/var/spacedrive
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.spacedrive-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.spacedrive.loadbalancer.server.port: 8080
+      traefik.http.routers.spacedrive-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.spacedrive-insecure.entrypoints: web
+      traefik.http.routers.spacedrive-insecure.service: spacedrive
+      traefik.http.routers.spacedrive-insecure.middlewares: spacedrive-web-redirect
+      traefik.http.routers.spacedrive.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.spacedrive.entrypoints: websecure
+      traefik.http.routers.spacedrive.service: spacedrive
+      traefik.http.routers.spacedrive.tls.certresolver: myresolver
+      traefik.http.routers.spacedrive-local-insecure.rule: Host(`spacedrive.${LOCAL_DOMAIN}`)
+      traefik.http.routers.spacedrive-local-insecure.entrypoints: web
+      traefik.http.routers.spacedrive-local-insecure.service: spacedrive
+      traefik.http.routers.spacedrive-local-insecure.middlewares: spacedrive-web-redirect
+      traefik.http.routers.spacedrive-local.rule: Host(`spacedrive.${LOCAL_DOMAIN}`)
+      traefik.http.routers.spacedrive-local.entrypoints: websecure
+      traefik.http.routers.spacedrive-local.service: spacedrive
+      traefik.http.routers.spacedrive-local.tls: true
+      runtipi.managed: true
+ 
+```
