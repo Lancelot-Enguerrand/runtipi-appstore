@@ -1,33 +1,64 @@
-# Uptime Kuma
 
-<div align="center" width="100%">
-    <img src="https://github.com/louislam/uptime-kuma/raw/master/public/icon.svg" width="128" alt="" />
-</div>
-
-It is a self-hosted monitoring tool like "Uptime Robot".
-
-<img src="https://uptime.kuma.pet/img/dark.jpg" width="700" alt="" />
-
-## 🥔 Live Demo
-
-Try it!
-
-https://demo.uptime.kuma.pet
-
-It is a temporary live demo, all data will be deleted after 10 minutes. The server is located in Tokyo, so if you live far from there, it may affect your experience. I suggest that you should install and try it out for the best demo experience.
-
-VPS is sponsored by Uptime Kuma sponsors on [Open Collective](https://opencollective.com/uptime-kuma)! Thank you so much!
-
-## ⭐ Features
-
-* Monitoring uptime for HTTP(s) / TCP / HTTP(s) Keyword / Ping / DNS Record / Push / Steam Game Server / Docker Containers.
-* Fancy, Reactive, Fast UI/UX.
-* Notifications via Telegram, Discord, Gotify, Slack, Pushover, Email (SMTP), and [90+ notification services, click here for the full list](https://github.com/louislam/uptime-kuma/tree/master/src/components/notifications).
-* 20 second intervals.
-* [Multi Languages](https://github.com/louislam/uptime-kuma/tree/master/src/languages)
-* Multiple Status Pages
-* Map Status Page to Domain
-* Ping Chart
-* Certificate Info
-* Proxy Support
-* 2FA available
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "uptime-kuma",
+      "image": "louislam/uptime-kuma:1",
+      "isMain": true,
+      "internalPort": 3001,
+      "volumes": [
+        {
+          "hostPath": "/var/run/docker.sock",
+          "containerPath": "/var/run/docker.sock"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/app/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ${APP_DATA_DIR}/data:/app/data
+    dns:
+    - ${DNS_IP}
+    ports:
+    - ${APP_PORT}:3001
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.uptime-kuma-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.uptime-kuma.loadbalancer.server.port: 3001
+      traefik.http.routers.uptime-kuma-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.uptime-kuma-insecure.entrypoints: web
+      traefik.http.routers.uptime-kuma-insecure.service: uptime-kuma
+      traefik.http.routers.uptime-kuma-insecure.middlewares: uptime-kuma-web-redirect
+      traefik.http.routers.uptime-kuma.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.uptime-kuma.entrypoints: websecure
+      traefik.http.routers.uptime-kuma.service: uptime-kuma
+      traefik.http.routers.uptime-kuma.tls.certresolver: myresolver
+      traefik.http.routers.uptime-kuma-local-insecure.rule: Host(`uptime-kuma.${LOCAL_DOMAIN}`)
+      traefik.http.routers.uptime-kuma-local-insecure.entrypoints: web
+      traefik.http.routers.uptime-kuma-local-insecure.service: uptime-kuma
+      traefik.http.routers.uptime-kuma-local-insecure.middlewares: uptime-kuma-web-redirect
+      traefik.http.routers.uptime-kuma-local.rule: Host(`uptime-kuma.${LOCAL_DOMAIN}`)
+      traefik.http.routers.uptime-kuma-local.entrypoints: websecure
+      traefik.http.routers.uptime-kuma-local.service: uptime-kuma
+      traefik.http.routers.uptime-kuma-local.tls: true
+      runtipi.managed: true
+ 
+```
