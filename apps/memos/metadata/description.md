@@ -1,10 +1,57 @@
-##  An open-source, self-hosted memo hub for knowledge management and collaboration.
 
-- Open source and free forever;
-- Support for self-hosting with Docker in seconds;
-- Plain textarea first and support some useful markdown syntax;
-- Collaborate and share with your teammates;
-- RESTful API for self-service.
-
-
-![Screenshot](https://raw.githubusercontent.com/usememos/memos/main/resources/demo.webp)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "memos",
+      "image": "neosmemo/memos:0.22.5",
+      "isMain": true,
+      "internalPort": 5230,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/memos",
+          "containerPath": "/var/opt/memos"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  memos:
+    image: neosmemo/memos:0.22.5
+    container_name: memos
+    volumes:
+    - ${APP_DATA_DIR}/memos:/var/opt/memos
+    ports:
+    - ${APP_PORT}:5230
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.memos-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.memos.loadbalancer.server.port: 5230
+      traefik.http.routers.memos-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.memos-insecure.entrypoints: web
+      traefik.http.routers.memos-insecure.service: memos
+      traefik.http.routers.memos-insecure.middlewares: memos-web-redirect
+      traefik.http.routers.memos.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.memos.entrypoints: websecure
+      traefik.http.routers.memos.service: memos
+      traefik.http.routers.memos.tls.certresolver: myresolver
+      traefik.http.routers.memos-local-insecure.rule: Host(`memos.${LOCAL_DOMAIN}`)
+      traefik.http.routers.memos-local-insecure.entrypoints: web
+      traefik.http.routers.memos-local-insecure.service: memos
+      traefik.http.routers.memos-local-insecure.middlewares: memos-web-redirect
+      traefik.http.routers.memos-local.rule: Host(`memos.${LOCAL_DOMAIN}`)
+      traefik.http.routers.memos-local.entrypoints: websecure
+      traefik.http.routers.memos-local.service: memos
+      traefik.http.routers.memos-local.tls: true
+      runtipi.managed: true
+ 
+```
