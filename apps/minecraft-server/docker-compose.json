@@ -1,0 +1,22 @@
+{
+  "services": [
+    {
+      "name": "minecraft-server",
+      "image": "itzg/minecraft-server:latest",
+      "isMain": true,
+      "internalPort": 25565,
+      "environment": {
+        "EULA": "TRUE",
+        "VERSION": "${MC_VERSION:-LATEST}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/minecraft-data",
+          "containerPath": "/data"
+        }
+      ],
+      "tty": true,
+      "stdinOpen": true
+    }
+  ]
+}
