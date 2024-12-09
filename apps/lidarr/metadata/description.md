@@ -1,24 +1,77 @@
-## Looks and smells like Sonarr but made for music. 
 
-Lidarr is a music collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new tracks from your favorite artists and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.
-
-### Major Features Include
-
-- Support for major platforms: Windows, Linux, macOS, Raspberry Pi, etc.
-- Automatically detects new tracks.
-- Can scan your existing library and download any missing tracks.
-- Can watch for better quality of the tracks you already have and do an automatic upgrade.
-- Automatic failed download handling will try another release if one fails
-- Manual search so you can pick any release or to see why a release was not downloaded automatically
-- Fully configurable track renaming
-- Full integration with SABnzbd and NZBGet
-- Full integration with Kodi, Plex (notification, library update, metadata)
-- Full support for specials and multi-album releases
-- And a beautiful UI
-
-## Folder Info
-
-| Root Folder                   | Container Folder |
-|-------------------------------|------------------|
-| /runtipi/app-data/lidarr/data | /config          |
-| /runtipi/media                | /media           |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "lidarr",
+      "image": "ghcr.io/linuxserver/lidarr:2.7.1",
+      "isMain": true,
+      "internalPort": 8686,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media",
+          "containerPath": "/media"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  lidarr:
+    image: ghcr.io/linuxserver/lidarr:2.7.1
+    container_name: lidarr
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data:/config
+    - ${ROOT_FOLDER_HOST}/media:/media
+    ports:
+    - ${APP_PORT}:8686
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.lidarr-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.lidarr.loadbalancer.server.port: 8686
+      traefik.http.routers.lidarr-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.lidarr-insecure.entrypoints: web
+      traefik.http.routers.lidarr-insecure.service: lidarr
+      traefik.http.routers.lidarr-insecure.middlewares: lidarr-web-redirect
+      traefik.http.routers.lidarr.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.lidarr.entrypoints: websecure
+      traefik.http.routers.lidarr.service: lidarr
+      traefik.http.routers.lidarr.tls.certresolver: myresolver
+      traefik.http.routers.lidarr-local-insecure.rule: Host(`lidarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.lidarr-local-insecure.entrypoints: web
+      traefik.http.routers.lidarr-local-insecure.service: lidarr
+      traefik.http.routers.lidarr-local-insecure.middlewares: lidarr-web-redirect
+      traefik.http.routers.lidarr-local.rule: Host(`lidarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.lidarr-local.entrypoints: websecure
+      traefik.http.routers.lidarr-local.service: lidarr
+      traefik.http.routers.lidarr-local.tls: true
+      runtipi.managed: true
+ 
+```
