@@ -1,8 +1,87 @@
-## Run VS Code on any machine anywhere and access it in the browser.
 
-- Code on any device with a consistent development environment
-- Use cloud servers to speed up tests, compilations, downloads, and more
-- Preserve battery life when you're on the go; all intensive tasks run on your server
-
-![Screenshot](https://raw.githubusercontent.com/coder/code-server/main/docs/assets/screenshot-1.png)
-![Screenshot](https://raw.githubusercontent.com/coder/code-server/main/docs/assets/screenshot-2.png)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "code-server",
+      "image": "lscr.io/linuxserver/code-server:4.95.3",
+      "isMain": true,
+      "internalPort": 8443,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}",
+        "PASSWORD": "${CODESERVER_PASSWORD}",
+        "SUDO_PASSWORD": "${CODESERVER_SUDO_PASSWORD}",
+        "DEFAULT_WORKSPACE": "/config/workspace"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/projects",
+          "containerPath": "/projects"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/app-data",
+          "containerPath": "/runtipi/app-data"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/user-config",
+          "containerPath": "/runtipi/user-config"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  code-server:
+    image: lscr.io/linuxserver/code-server:4.95.3
+    container_name: code-server
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    - PASSWORD=${CODESERVER_PASSWORD}
+    - SUDO_PASSWORD=${CODESERVER_SUDO_PASSWORD}
+    - DEFAULT_WORKSPACE=/config/workspace
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${APP_DATA_DIR}/data/projects:/projects
+    - ${ROOT_FOLDER_HOST}/app-data:/runtipi/app-data
+    - ${ROOT_FOLDER_HOST}/user-config:/runtipi/user-config
+    ports:
+    - ${APP_PORT}:8443
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.code-server-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.code-server.loadbalancer.server.port: 8443
+      traefik.http.routers.code-server-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.code-server-insecure.entrypoints: web
+      traefik.http.routers.code-server-insecure.service: code-server
+      traefik.http.routers.code-server-insecure.middlewares: code-server-web-redirect
+      traefik.http.routers.code-server.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.code-server.entrypoints: websecure
+      traefik.http.routers.code-server.service: code-server
+      traefik.http.routers.code-server.tls.certresolver: myresolver
+      traefik.http.routers.code-server-local-insecure.rule: Host(`code-server.${LOCAL_DOMAIN}`)
+      traefik.http.routers.code-server-local-insecure.entrypoints: web
+      traefik.http.routers.code-server-local-insecure.service: code-server
+      traefik.http.routers.code-server-local-insecure.middlewares: code-server-web-redirect
+      traefik.http.routers.code-server-local.rule: Host(`code-server.${LOCAL_DOMAIN}`)
+      traefik.http.routers.code-server-local.entrypoints: websecure
+      traefik.http.routers.code-server-local.service: code-server
+      traefik.http.routers.code-server-local.tls: true
+      runtipi.managed: true
+ 
+```
