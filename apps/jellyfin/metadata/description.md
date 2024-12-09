@@ -1,12 +1,73 @@
-## A media server for your home collection
 
-Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emby and Plex, to provide media from a dedicated server to end-user devices via multiple apps. Jellyfin is descended from Emby's 3.5.2 release and ported to the .NET Core framework to enable full cross-platform support. There are no strings attached, no premium licenses or features, and no hidden agendas: just a team who want to build something better and work together to achieve it. We welcome anyone who is interested in joining us in our quest!
-
-For further details, please see [our documentation page](https://docs.jellyfin.org/). To receive the latest updates, get help with Jellyfin, and join the community, please visit [one of our communication channels](https://docs.jellyfin.org/general/getting-help.html). For more information about the project, please see our [about page](https://docs.jellyfin.org/general/about.html).
-
-## Folder Info
-
-| Root Folder                            | Container Folder |
-|----------------------------------------|------------------|
-| /runtipi/app-data/jellyfin/data/config | /config          |
-| /runtipi/media/data                    | /media/data      |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "jellyfin",
+      "image": "lscr.io/linuxserver/jellyfin:10.10.3",
+      "isMain": true,
+      "internalPort": 8096,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}",
+        "JELLYFIN_PublishedServerUrl": "${APP_PROTOCOL:-http}://${APP_DOMAIN}/"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/data",
+          "containerPath": "/media/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:10.10.3
+    container_name: jellyfin
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${ROOT_FOLDER_HOST}/media/data:/media/data
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    - JELLYFIN_PublishedServerUrl=${APP_PROTOCOL:-http}://${APP_DOMAIN}/
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8096
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.jellyfin-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.jellyfin.loadbalancer.server.port: 8096
+      traefik.http.routers.jellyfin-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.jellyfin-insecure.entrypoints: web
+      traefik.http.routers.jellyfin-insecure.service: jellyfin
+      traefik.http.routers.jellyfin-insecure.middlewares: jellyfin-web-redirect
+      traefik.http.routers.jellyfin.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.jellyfin.entrypoints: websecure
+      traefik.http.routers.jellyfin.service: jellyfin
+      traefik.http.routers.jellyfin.tls.certresolver: myresolver
+      traefik.http.routers.jellyfin-local-insecure.rule: Host(`jellyfin.${LOCAL_DOMAIN}`)
+      traefik.http.routers.jellyfin-local-insecure.entrypoints: web
+      traefik.http.routers.jellyfin-local-insecure.service: jellyfin
+      traefik.http.routers.jellyfin-local-insecure.middlewares: jellyfin-web-redirect
+      traefik.http.routers.jellyfin-local.rule: Host(`jellyfin.${LOCAL_DOMAIN}`)
+      traefik.http.routers.jellyfin-local.entrypoints: websecure
+      traefik.http.routers.jellyfin-local.service: jellyfin
+      traefik.http.routers.jellyfin-local.tls: true
+      runtipi.managed: true
+ 
+```
