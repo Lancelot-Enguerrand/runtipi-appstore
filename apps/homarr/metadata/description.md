@@ -1,10 +1,76 @@
-# Lightweight homepage for your server
-Homarr is a simple and lightweight homepage for your server, that helps you easily access all of your services in one place.
-It integrates with the services you use to display information on the homepage (E.g. Show upcoming Sonarr/Radarr releases).
 
-If you have any questions about Homarr or want to share information with us, please go to one of the following places:
-
-- [Github Discussions](https://github.com/ajnart/homarr/discussions)
-- [Discord Server](https://discord.gg/aCsmEV5RgA)
-
-![Screenshot](https://user-images.githubusercontent.com/71191962/169860380-856634fb-4f41-47cb-ba54-6a9e7b3b9c81.gif)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "homarr",
+      "image": "ghcr.io/ajnart/homarr:0.15.9",
+      "isMain": true,
+      "internalPort": 7575,
+      "environment": {
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/app/data/configs"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/icons",
+          "containerPath": "/app/public/icons"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/dashboard",
+          "containerPath": "/data"
+        },
+        {
+          "hostPath": "/var/run/docker.sock",
+          "containerPath": "/var/run/docker.sock"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:0.15.9
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/app/data/configs
+    - ${APP_DATA_DIR}/data/icons:/app/public/icons
+    - ${APP_DATA_DIR}/data/dashboard:/data
+    - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+    - TZ=${TZ}
+    ports:
+    - ${APP_PORT}:7575
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.homarr-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.homarr.loadbalancer.server.port: 7575
+      traefik.http.routers.homarr-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.homarr-insecure.entrypoints: web
+      traefik.http.routers.homarr-insecure.service: homarr
+      traefik.http.routers.homarr-insecure.middlewares: homarr-web-redirect
+      traefik.http.routers.homarr.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.homarr.entrypoints: websecure
+      traefik.http.routers.homarr.service: homarr
+      traefik.http.routers.homarr.tls.certresolver: myresolver
+      traefik.http.routers.homarr-local-insecure.rule: Host(`homarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.homarr-local-insecure.entrypoints: web
+      traefik.http.routers.homarr-local-insecure.service: homarr
+      traefik.http.routers.homarr-local-insecure.middlewares: homarr-web-redirect
+      traefik.http.routers.homarr-local.rule: Host(`homarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.homarr-local.entrypoints: websecure
+      traefik.http.routers.homarr-local.service: homarr
+      traefik.http.routers.homarr-local.tls: true
+      runtipi.managed: true
+ 
+```
