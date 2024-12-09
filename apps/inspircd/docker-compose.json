@@ -1,0 +1,16 @@
+{
+  "services": [
+    {
+      "name": "inspircd",
+      "image": "inspircd/inspircd-docker:3.17.1",
+      "isMain": true,
+      "internalPort": 6697,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/inspircd/conf"
+        }
+      ]
+    }
+  ]
+}
