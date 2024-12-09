@@ -1,21 +1,115 @@
-# Wekan
 
-Open-Source Kanban
-
-Experience efficient task management with WeKan - the Open-Source, customizable, and privacy-focused kanban
-
-## App Links
-
-<https://wekan.github.io/>
-
-<https://github.com/wekan/wekan>
-
-## Mail
-
-Wekan requires a working email to register a user. This app is configured to use a google mail account with an app-password.
-
-<https://support.google.com/mail/answer/185833?hl=en>
-
-For the use with other email providers use a user-config and configure env via:
-
-<https://github.com/wekan/wekan/wiki/Troubleshooting-Mail>
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "wekan",
+      "image": "ghcr.io/wekan/wekan:v7.72",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "MONGO_URL": "mongodb://wekan-db:27017/wekan",
+        "ROOT_URL": "https://${APP_DOMAIN}",
+        "MAIL_URL": "smtp://${MAIL_ADDRESS}:${MAIL_PASSWORD}@smtp.gmail.com:587",
+        "MAIL_FROM": "Wekan Notifications <noreply.wekan@${APP_DOMAIN}>"
+      },
+      "dependsOn": [
+        "wekan-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/wekan",
+          "containerPath": "/data"
+        }
+      ]
+    },
+    {
+      "name": "wekan-db",
+      "image": "mongo:6",
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/mongo",
+          "containerPath": "/data/db"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/dump",
+          "containerPath": "/dump"
+        }
+      ],
+      "command": "mongod --logpath /dev/null --oplogSize 128 --quiet"
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  wekan:
+    image: ghcr.io/wekan/wekan:v7.72
+    container_name: wekan
+    environment:
+    - MONGO_URL=mongodb://wekan-db:27017/wekan
+    - ROOT_URL=https://${APP_DOMAIN}
+    - MAIL_URL=smtp://${MAIL_ADDRESS}:${MAIL_PASSWORD}@smtp.gmail.com:587
+    - MAIL_FROM=Wekan Notifications <noreply.wekan@${APP_DOMAIN}>
+    restart: unless-stopped
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data/wekan:/data
+    ports:
+    - ${APP_PORT}:8080
+    depends_on:
+    - wekan-db
+    networks:
+    - tipi_main_network
+    - backend_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.wekan-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.wekan.loadbalancer.server.port: 8080
+      traefik.http.routers.wekan-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.wekan-insecure.entrypoints: web
+      traefik.http.routers.wekan-insecure.service: wekan
+      traefik.http.routers.wekan-insecure.middlewares: wekan-web-redirect
+      traefik.http.routers.wekan.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.wekan.entrypoints: websecure
+      traefik.http.routers.wekan.service: wekan
+      traefik.http.routers.wekan.tls.certresolver: myresolver
+      traefik.http.routers.wekan-local-insecure.rule: Host(`wekan.${LOCAL_DOMAIN}`)
+      traefik.http.routers.wekan-local-insecure.entrypoints: web
+      traefik.http.routers.wekan-local-insecure.service: wekan
+      traefik.http.routers.wekan-local-insecure.middlewares: wekan-web-redirect
+      traefik.http.routers.wekan-local.rule: Host(`wekan.${LOCAL_DOMAIN}`)
+      traefik.http.routers.wekan-local.entrypoints: websecure
+      traefik.http.routers.wekan-local.service: wekan
+      traefik.http.routers.wekan-local.tls: true
+      runtipi.managed: true
+  wekan-db:
+    container_name: wekan-db
+    image: mongo:6
+    restart: unless-stopped
+    command: mongod --logpath /dev/null --oplogSize 128 --quiet
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data/mongo:/data/db
+    - ${APP_DATA_DIR}/data/dump:/dump
+    networks:
+    - backend_network
+    labels:
+      runtipi.managed: true
+networks:
+  backend_network: null
+ 
+```
