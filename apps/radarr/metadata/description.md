@@ -1,30 +1,79 @@
-## A fork of Sonarr to work with movies à la Couchpotato. 
 
-Radarr is a movie collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new movies and will interface with clients and indexers to grab, sort, and rename them. It can also be configured to automatically upgrade the quality of existing files in the library when a better quality format becomes available. Note that only one type of a given movie is supported. If you want both an 4k version and 1080p version of a given movie you will need multiple instances.
-
-### Major Features Include
-
-* Adding new movies with lots of information, such as trailers, ratings, etc.
-* Support for major platforms: Windows, Linux, macOS, Raspberry Pi, etc.
-* Can watch for better quality of the movies you have and do an automatic upgrade. *e.g. from DVD to Blu-Ray*
-* Automatic failed download handling will try another release if one fails
-* Manual search so you can pick any release or to see why a release was not downloaded automatically
-* Full integration with SABnzbd and NZBGet
-* Automatically searching for releases as well as RSS Sync
-* Automatically importing downloaded movies
-* Recognizing Special Editions, Director's Cut, etc.
-* Identifying releases with hardcoded subs
-* Identifying releases with AKA movie names
-* SABnzbd, NZBGet, QBittorrent, Deluge, rTorrent, Transmission, uTorrent, and other download clients are supported and integrated
-* Full integration with Kodi and Plex (notifications, library updates)
-* Importing Metadata such as trailers or subtitles
-* Adding metadata such as posters and information for Kodi and others to use
-* Advanced customization for profiles, such that Radarr will always download the copy you want
-* A beautiful UI
-
-## Folder Info
-
-| Root Folder                   | Container Folder |
-|-------------------------------|------------------|
-| /runtipi/app-data/radarr/data | /config          |
-| /runtipi/media                | /media           |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "radarr",
+      "image": "ghcr.io/linuxserver/radarr:5.15.1",
+      "isMain": true,
+      "internalPort": 7878,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media",
+          "containerPath": "/media"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  radarr:
+    image: ghcr.io/linuxserver/radarr:5.15.1
+    container_name: radarr
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    dns:
+    - ${DNS_IP}
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data:/config
+    - ${ROOT_FOLDER_HOST}/media:/media
+    ports:
+    - ${APP_PORT}:7878
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.radarr-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.radarr.loadbalancer.server.port: 7878
+      traefik.http.routers.radarr-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.radarr-insecure.entrypoints: web
+      traefik.http.routers.radarr-insecure.service: radarr
+      traefik.http.routers.radarr-insecure.middlewares: radarr-web-redirect
+      traefik.http.routers.radarr.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.radarr.entrypoints: websecure
+      traefik.http.routers.radarr.service: radarr
+      traefik.http.routers.radarr.tls.certresolver: myresolver
+      traefik.http.routers.radarr-local-insecure.rule: Host(`radarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.radarr-local-insecure.entrypoints: web
+      traefik.http.routers.radarr-local-insecure.service: radarr
+      traefik.http.routers.radarr-local-insecure.middlewares: radarr-web-redirect
+      traefik.http.routers.radarr-local.rule: Host(`radarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.radarr-local.entrypoints: websecure
+      traefik.http.routers.radarr-local.service: radarr
+      traefik.http.routers.radarr-local.tls: true
+      runtipi.managed: true
+ 
+```
