@@ -1,21 +1,66 @@
-## Privacy-respecting, hackable metasearch engine
 
-SearXNG is a free internet metasearch engine which aggregates results from more than 70 search services. Users are neither tracked nor profiled. Additionally, SearXNG can be used over Tor for online anonymity.
-
-### Differences to searx
-
-SearXNG is a fork of searx. Here are some of the changes:
-
-- User experience
-- Huge update of the simple theme:
-  - usable on desktop, tablet and mobile
-  - light and dark versions (you can choose in the preferences)
-  - support right-to-left languages
-- the translations are up to date, you can contribute on Weblate
-- the preferences page has been updated:
-  - you can see which engines are reliable or not
-  - engines are grouped inside each tab
-  - each engine has a description
-- thanks to the anonymous metrics, it is easier to report a bug of an engine and thus engines get fixed more quickly
-  - if you don't want any metrics to be recorded, you can disable them on the server
-- administrator can block and/or replace the URLs in the search results
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "searxng",
+      "image": "searxng/searxng:latest",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "BIND_ADDRESS": "0.0.0.0:8080",
+        "BASE_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}/",
+        "SEARXNG_SECRET": "${SEARXNG_SECRET_KEY}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/etc/searxng"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  searxng:
+    container_name: searxng
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    volumes:
+    - ${APP_DATA_DIR}/data:/etc/searxng
+    ports:
+    - ${APP_PORT}:8080
+    environment:
+    - BIND_ADDRESS=0.0.0.0:8080
+    - BASE_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/
+    - SEARXNG_SECRET=${SEARXNG_SECRET_KEY}
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.searxng-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.searxng.loadbalancer.server.port: 8080
+      traefik.http.routers.searxng-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.searxng-insecure.entrypoints: web
+      traefik.http.routers.searxng-insecure.service: searxng
+      traefik.http.routers.searxng-insecure.middlewares: searxng-web-redirect
+      traefik.http.routers.searxng.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.searxng.entrypoints: websecure
+      traefik.http.routers.searxng.service: searxng
+      traefik.http.routers.searxng.tls.certresolver: myresolver
+      traefik.http.routers.searxng-local-insecure.rule: Host(`searxng.${LOCAL_DOMAIN}`)
+      traefik.http.routers.searxng-local-insecure.entrypoints: web
+      traefik.http.routers.searxng-local-insecure.service: searxng
+      traefik.http.routers.searxng-local-insecure.middlewares: searxng-web-redirect
+      traefik.http.routers.searxng-local.rule: Host(`searxng.${LOCAL_DOMAIN}`)
+      traefik.http.routers.searxng-local.entrypoints: websecure
+      traefik.http.routers.searxng-local.service: searxng
+      traefik.http.routers.searxng-local.tls: true
+      runtipi.managed: true
+ 
+```
