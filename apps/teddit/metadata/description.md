@@ -1,17 +1,130 @@
-# teddit
 
-[teddit.net](https://teddit.net)
-
-A free and open source alternative Reddit front-end focused on privacy.
-Inspired by the [Nitter](https://github.com/zedeus/nitter) project.
-
-* No JavaScript or ads
-* All requests go through the backend, client never talks to Reddit
-* Prevents Reddit from tracking your IP or JavaScript fingerprint
-* [Unofficial API](https://codeberg.org/teddit/teddit/wiki#teddit-api) (RSS & JSON support, no rate limits or Reddit account required)
-* Lightweight (teddit frontpage: ~30 HTTP requests with ~270 KB of data downloaded vs. Reddit frontpage: ~190 requests with ~24 MB)
-* Self-hostable. Anyone can setup an instance. An instance can either use Reddit's API with or without OAuth (so Reddit API key is not necessarily needed).
-
-Join the teddit discussion room on Matrix: [#teddit:matrix.org](https://matrix.to/#/#teddit:matrix.org)
-
-XMR: 832ogRwuoSs2JGYg7wJTqshidK7dErgNdfpenQ9dzMghNXQTJRby1xGbqC3gW3GAifRM9E84J91VdMZRjoSJ32nkAZnaCEj
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "teddit",
+      "image": "teddit/teddit:latest",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "REDIS_HOST": "teddit-redis",
+        "DOMAIN": "${APP_DOMAIN}",
+        "THEME": "dark",
+        "HTTPS_ENABLED": "false",
+        "REDIRECT_HTTP_TO_HTTPS": "false",
+        "REDIRECT_WWW": "false"
+      },
+      "dependsOn": [
+        "teddit-redis"
+      ],
+      "healthCheck": {
+        "test": [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/about"
+        ],
+        "interval": "1m",
+        "timeout": "3s",
+        "retries": 3
+      }
+    },
+    {
+      "name": "teddit-redis",
+      "image": "redis:alpine",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/redis",
+          "containerPath": "/data"
+        }
+      ],
+      "healthCheck": {
+        "test": [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ],
+        "interval": "1s",
+        "timeout": "3s",
+        "retries": 30
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  teddit:
+    image: teddit/teddit:latest
+    container_name: teddit
+    networks:
+    - tipi_main_network
+    ports:
+    - ${APP_PORT}:8080
+    depends_on:
+    - teddit-redis
+    restart: unless-stopped
+    environment:
+    - REDIS_HOST=teddit-redis
+    - DOMAIN=${APP_DOMAIN}
+    - THEME=dark
+    - HTTPS_ENABLED=false
+    - REDIRECT_HTTP_TO_HTTPS=false
+    - REDIRECT_WWW=false
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://localhost:8080/about
+      interval: 1m
+      timeout: 3s
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.teddit-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.teddit.loadbalancer.server.port: 8080
+      traefik.http.routers.teddit-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.teddit-insecure.entrypoints: web
+      traefik.http.routers.teddit-insecure.service: teddit
+      traefik.http.routers.teddit-insecure.middlewares: teddit-web-redirect
+      traefik.http.routers.teddit.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.teddit.entrypoints: websecure
+      traefik.http.routers.teddit.service: teddit
+      traefik.http.routers.teddit.tls.certresolver: myresolver
+      traefik.http.routers.teddit-local-insecure.rule: Host(`teddit.${LOCAL_DOMAIN}`)
+      traefik.http.routers.teddit-local-insecure.entrypoints: web
+      traefik.http.routers.teddit-local-insecure.service: teddit
+      traefik.http.routers.teddit-local-insecure.middlewares: teddit-web-redirect
+      traefik.http.routers.teddit-local.rule: Host(`teddit.${LOCAL_DOMAIN}`)
+      traefik.http.routers.teddit-local.entrypoints: websecure
+      traefik.http.routers.teddit-local.service: teddit
+      traefik.http.routers.teddit-local.tls: true
+      runtipi.managed: true
+  teddit-redis:
+    image: redis:alpine
+    container_name: teddit-redis
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/redis:/data
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - ping
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
