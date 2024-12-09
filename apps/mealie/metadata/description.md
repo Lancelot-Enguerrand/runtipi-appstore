@@ -1,9 +1,64 @@
-## Mealie is a self-hosted recipe manager and meal planner.
 
-- **username**: changeme@email.com
-- **password**: MyPassword
-<br />
-
-Mealie is a self hosted recipe manager and meal planner with a RestAPI backend and a reactive frontend application built in Vue for a pleasant user experience for the whole family. Easily add recipes into your database by providing the url and Mealie will automatically import the relevant data or add a family recipe with the UI editor. Mealie also provides an API for interactions from 3rd party applications.
-
-[![Product Name Screen Shot](https://raw.githubusercontent.com/hay-kot/mealie/mealie-next/docs/docs/assets/img/home_screenshot.png)](https://docs.mealie.io/)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "mealie",
+      "image": "hkotel/mealie:v0.5.6",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "PUID": 1000,
+        "PGID": 1000
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/app/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  mealie:
+    container_name: mealie
+    image: hkotel/mealie:v0.5.6
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:80
+    environment:
+      PUID: 1000
+      PGID: 1000
+    volumes:
+    - ${APP_DATA_DIR}/data:/app/data
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.mealie-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.mealie.loadbalancer.server.port: 80
+      traefik.http.routers.mealie-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mealie-insecure.entrypoints: web
+      traefik.http.routers.mealie-insecure.service: mealie
+      traefik.http.routers.mealie-insecure.middlewares: mealie-web-redirect
+      traefik.http.routers.mealie.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mealie.entrypoints: websecure
+      traefik.http.routers.mealie.service: mealie
+      traefik.http.routers.mealie.tls.certresolver: myresolver
+      traefik.http.routers.mealie-local-insecure.rule: Host(`mealie.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mealie-local-insecure.entrypoints: web
+      traefik.http.routers.mealie-local-insecure.service: mealie
+      traefik.http.routers.mealie-local-insecure.middlewares: mealie-web-redirect
+      traefik.http.routers.mealie-local.rule: Host(`mealie.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mealie-local.entrypoints: websecure
+      traefik.http.routers.mealie-local.service: mealie
+      traefik.http.routers.mealie-local.tls: true
+      runtipi.managed: true
+ 
+```
