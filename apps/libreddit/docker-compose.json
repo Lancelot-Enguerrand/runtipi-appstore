@@ -1,0 +1,10 @@
+{
+  "services": [
+    {
+      "name": "libreddit",
+      "image": "libreddit/libreddit:latest",
+      "isMain": true,
+      "internalPort": 8080
+    }
+  ]
+}
