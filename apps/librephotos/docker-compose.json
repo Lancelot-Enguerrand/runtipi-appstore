@@ -2,13 +2,10 @@
   "services": [
     {
       "name": "librephotos",
-      "image": "reallibrephotos/librephotos-proxy:2023w48",
+      "image": "reallibrephotos/librephotos-proxy:2024w47",
       "isMain": true,
       "internalPort": 80,
-      "dependsOn": [
-        "librephotos-backend",
-        "librephotos-frontend"
-      ],
+      "dependsOn": ["librephotos-backend", "librephotos-frontend"],
       "volumes": [
         {
           "hostPath": "${APP_DATA_DIR}/data/scan",
@@ -40,10 +37,7 @@
         }
       ],
       "healthCheck": {
-        "test": [
-          "CMD-SHELL",
-          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
-        ],
+        "test": ["pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"],
         "interval": "5s",
         "timeout": "5s",
         "retries": 5
@@ -51,14 +45,12 @@
     },
     {
       "name": "librephotos-frontend",
-      "image": "reallibrephotos/librephotos-frontend:2023w48",
-      "dependsOn": [
-        "librephotos-backend"
-      ]
+      "image": "reallibrephotos/librephotos-frontend:2024w47",
+      "dependsOn": ["librephotos-backend"]
     },
     {
       "name": "librephotos-backend",
-      "image": "reallibrephotos/librephotos:2023w48",
+      "image": "reallibrephotos/librephotos:2024w47",
       "environment": {
         "SECRET_KEY": "${LIBREPHOTOS_SECRET_KEY}",
         "BACKEND_HOST": "librephotos-backend",
