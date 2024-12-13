@@ -1,10 +1,68 @@
-# Selfhosted notification service
 
-We wanted a simple server for sending and receiving messages (in real time per WebSocket). For this, not many open source projects existed and most of the existing ones were abandoned. Also, a requirement was that it can be self-hosted. We know there are many free and commercial push services out there.
-
-At the heart of this project. (gotify/server)[https://hub.docker.com/r/gotify/server] features a WebUI and functionality for:
-
--   sending messages via a REST-API
--   subscribing/receiving messages via a web socket connection
--   managing users, clients and applications
-
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "gotify",
+      "image": "gotify/server:2.6.1",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "GOTIFY_DEFAULTUSER_NAME": "${GOTIFY_DEFAULTUSER_NAME}",
+        "GOTIFY_DEFAULTUSER_PASS": "${GOTIFY_DEFAULTUSER_PASS}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/app/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  gotify:
+    image: gotify/server:2.6.1
+    container_name: gotify
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data:/app/data
+    environment:
+    - GOTIFY_DEFAULTUSER_NAME=${GOTIFY_DEFAULTUSER_NAME}
+    - GOTIFY_DEFAULTUSER_PASS=${GOTIFY_DEFAULTUSER_PASS}
+    ports:
+    - ${APP_PORT}:80
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.gotify-web-redirect.redirectscheme.scheme: https
+      traefik.http.middlewares.gotify-web-redirect.redirectscheme.permanent: true
+      traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto: http
+      traefik.http.services.gotify.loadbalancer.server.port: 80
+      traefik.http.services.gotify.loadbalancer.passhostheader: true
+      traefik.http.services.gotify.loadbalancer.sticky: true
+      traefik.http.routers.gotify-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.gotify-insecure.entrypoints: web
+      traefik.http.routers.gotify-insecure.service: gotify
+      traefik.http.routers.gotify-insecure.middlewares: gotify-web-redirect
+      traefik.http.routers.gotify.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.gotify.entrypoints: websecure
+      traefik.http.routers.gotify.service: gotify
+      traefik.http.routers.gotify.tls.certresolver: myresolver
+      traefik.http.routers.gotify-local-insecure.rule: Host(`gotify.${LOCAL_DOMAIN}`)
+      traefik.http.routers.gotify-local-insecure.entrypoints: web
+      traefik.http.routers.gotify-local-insecure.service: gotify
+      traefik.http.routers.gotify-local-insecure.middlewares: gotify-web-redirect
+      traefik.http.routers.gotify-local.rule: Host(`gotify.${LOCAL_DOMAIN}`)
+      traefik.http.routers.gotify-local.entrypoints: websecure
+      traefik.http.routers.gotify-local.service: gotify
+      traefik.http.routers.gotify-local.tls: true
+      runtipi.managed: true
+ 
+```
