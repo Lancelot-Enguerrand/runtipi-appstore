@@ -1,5 +1,62 @@
-# Flightlog: Easily keep track of your personal flight history
 
-Flightlog is a web application inspired by [Flugstatistik](https://flugstatistik.de), with more features, a modern UI and a streamlined user experience.
-
-Read more on [GitHub](https://github.com/perdian/flightlog)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "flightlog",
+      "image": "perdian/flightlog:v2.1.1",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "FLIGHTLOG_SERVER_CONTEXT_PATH": "/"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/flightlog/database"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  flightlog:
+    container_name: flightlog
+    image: perdian/flightlog:v2.1.1
+    environment:
+    - FLIGHTLOG_SERVER_CONTEXT_PATH=/
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/flightlog/database
+    ports:
+    - ${APP_PORT}:8080
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.flightlog-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.flightlog.loadbalancer.passhostheader: true
+      traefik.http.services.flightlog.loadbalancer.server.port: 8080
+      traefik.http.routers.flightlog-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.flightlog-insecure.entrypoints: web
+      traefik.http.routers.flightlog-insecure.service: flightlog
+      traefik.http.routers.flightlog-insecure.middlewares: flightlog-web-redirect
+      traefik.http.routers.flightlog.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.flightlog.entrypoints: websecure
+      traefik.http.routers.flightlog.service: flightlog
+      traefik.http.routers.flightlog.tls.certresolver: myresolver
+      traefik.http.routers.flightlog-local-insecure.rule: Host(`flightlog.${LOCAL_DOMAIN}`)
+      traefik.http.routers.flightlog-local-insecure.entrypoints: web
+      traefik.http.routers.flightlog-local-insecure.service: flightlog
+      traefik.http.routers.flightlog-local-insecure.middlewares: flightlog-web-redirect
+      traefik.http.routers.flightlog-local.rule: Host(`flightlog.${LOCAL_DOMAIN}`)
+      traefik.http.routers.flightlog-local.entrypoints: websecure
+      traefik.http.routers.flightlog-local.service: flightlog
+      traefik.http.routers.flightlog-local.tls: true
+      runtipi.managed: true
+ 
+```
