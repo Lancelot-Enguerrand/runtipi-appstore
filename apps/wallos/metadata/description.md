@@ -1,5 +1,73 @@
-# Wallos
 
-Open-Source Personal Subscription Tracker
-
-Wallos is a powerful, open-source, and self-hostable web application designed to empower you in managing your finances with ease. Say goodbye to complicated spreadsheets and expensive financial software – Wallos simplifies the process of tracking expenses and helps you gain better control over your financial life.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "wallos",
+      "image": "bellamy/wallos:2.41.0",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/www/html/db"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/logos",
+          "containerPath": "/var/www/html/images/uploads/logos"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3'
+services:
+  wallos:
+    image: bellamy/wallos:2.41.0
+    container_name: wallos
+    environment:
+    - TZ=${TZ}
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:80
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data/db:/var/www/html/db
+    - ${APP_DATA_DIR}/data/logos:/var/www/html/images/uploads/logos
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.wallos-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.wallos.loadbalancer.server.port: 80
+      traefik.http.routers.wallos-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.wallos-insecure.entrypoints: web
+      traefik.http.routers.wallos-insecure.service: wallos
+      traefik.http.routers.wallos-insecure.middlewares: wallos-web-redirect
+      traefik.http.routers.wallos.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.wallos.entrypoints: websecure
+      traefik.http.routers.wallos.service: wallos
+      traefik.http.routers.wallos.tls.certresolver: myresolver
+      traefik.http.routers.wallos-local-insecure.rule: Host(`wallos.${LOCAL_DOMAIN}`)
+      traefik.http.routers.wallos-local-insecure.entrypoints: web
+      traefik.http.routers.wallos-local-insecure.service: wallos
+      traefik.http.routers.wallos-local-insecure.middlewares: wallos-web-redirect
+      traefik.http.routers.wallos-local.rule: Host(`wallos.${LOCAL_DOMAIN}`)
+      traefik.http.routers.wallos-local.entrypoints: websecure
+      traefik.http.routers.wallos-local.service: wallos
+      traefik.http.routers.wallos-local.tls: true
+      runtipi.managed: true
+ 
+```
