@@ -1,23 +1,56 @@
-## Default credentials
 
-Username: **admin**
-Password: **admin**
-
-## Features
-
-The open-source platform for monitoring and observability
-
-Grafana allows you to query, visualize, alert on and understand your metrics no matter where they are stored. Create, explore, and share dashboards with your team and foster a data-driven culture:
-
-- **Visualizations:** Fast and flexible client side graphs with a multitude of options. Panel plugins offer many different ways to visualize metrics and logs.
-- **Dynamic Dashboards:** Create dynamic & reusable dashboards with template variables that appear as dropdowns at the top of the dashboard.
-- **Explore Metrics:** Explore your data through ad-hoc queries and dynamic drilldown. Split view and compare different time ranges, queries and data sources side by side.
-- **Explore Logs:** Experience the magic of switching from metrics to logs with preserved label filters. Quickly search through all your logs or streaming them live.
-- **Alerting:** Visually define alert rules for your most important metrics. Grafana will continuously evaluate and send notifications to systems like Slack, PagerDuty, VictorOps, OpsGenie.
-- **Mixed Data Sources:** Mix different data sources in the same graph! You can specify a data source on a per-query basis. This works for even custom datasources.
-
-## [](https://github.com/grafana/grafana#documentation)Documentation
-
-The Grafana documentation is available at [grafana.com/docs](https://grafana.com/docs/).
-
-## [](https://github.com/grafana/grafana#contributing)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "grafana",
+      "image": "grafana/grafana-oss:11.4.0",
+      "isMain": true,
+      "internalPort": 3000,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/grafana",
+          "containerPath": "/var/lib/grafana"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3'
+services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-oss:11.4.0
+    ports:
+    - ${APP_PORT}:3000
+    volumes:
+    - ${APP_DATA_DIR}/data/grafana:/var/lib/grafana
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.grafana-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.grafana.loadbalancer.server.port: 3000
+      traefik.http.routers.grafana-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.grafana-insecure.entrypoints: web
+      traefik.http.routers.grafana-insecure.service: grafana
+      traefik.http.routers.grafana-insecure.middlewares: grafana-web-redirect
+      traefik.http.routers.grafana.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.grafana.entrypoints: websecure
+      traefik.http.routers.grafana.service: grafana
+      traefik.http.routers.grafana.tls.certresolver: myresolver
+      traefik.http.routers.grafana-local-insecure.rule: Host(`grafana.${LOCAL_DOMAIN}`)
+      traefik.http.routers.grafana-local-insecure.entrypoints: web
+      traefik.http.routers.grafana-local-insecure.service: grafana
+      traefik.http.routers.grafana-local-insecure.middlewares: grafana-web-redirect
+      traefik.http.routers.grafana-local.rule: Host(`grafana.${LOCAL_DOMAIN}`)
+      traefik.http.routers.grafana-local.entrypoints: websecure
+      traefik.http.routers.grafana-local.service: grafana
+      traefik.http.routers.grafana-local.tls: true
+      runtipi.managed: true
+ 
+```
