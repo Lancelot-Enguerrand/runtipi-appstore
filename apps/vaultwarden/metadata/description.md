@@ -1,13 +1,64 @@
-## All your passwords in your control!
 
-Alternative implementation of the Bitwarden server API written in Rust and compatible with [upstream Bitwarden clients](https://bitwarden.com/download/), perfect for self-hosted deployment where running the official resource-heavy service might not be ideal.
-
-Basically full implementation of Bitwarden API is provided including:
-
- * Organizations support
- * Attachments
- * Vault API support
- * Serving the static files for Vault interface
- * Website icons API
- * Authenticator and U2F support
- * YubiKey and Duo support
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "vaultwarden",
+      "image": "vaultwarden/server:1.32.6",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "WEBSOCKET_ENABLED": "true",
+        "ADMIN_TOKEN": "${VAULTWARDEN_ADMIN_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.32.6
+    container_name: vaultwarden
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:80
+    environment:
+    - WEBSOCKET_ENABLED=true
+    - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_PASSWORD}
+    volumes:
+    - ${APP_DATA_DIR}/data:/data
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.vaultwarden-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.vaultwarden.loadbalancer.server.port: 80
+      traefik.http.routers.vaultwarden-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.vaultwarden-insecure.entrypoints: web
+      traefik.http.routers.vaultwarden-insecure.service: vaultwarden
+      traefik.http.routers.vaultwarden-insecure.middlewares: vaultwarden-web-redirect
+      traefik.http.routers.vaultwarden.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.vaultwarden.entrypoints: websecure
+      traefik.http.routers.vaultwarden.service: vaultwarden
+      traefik.http.routers.vaultwarden.tls.certresolver: myresolver
+      traefik.http.routers.vaultwarden-local-insecure.rule: Host(`vaultwarden.${LOCAL_DOMAIN}`)
+      traefik.http.routers.vaultwarden-local-insecure.entrypoints: web
+      traefik.http.routers.vaultwarden-local-insecure.service: vaultwarden
+      traefik.http.routers.vaultwarden-local-insecure.middlewares: vaultwarden-web-redirect
+      traefik.http.routers.vaultwarden-local.rule: Host(`vaultwarden.${LOCAL_DOMAIN}`)
+      traefik.http.routers.vaultwarden-local.entrypoints: websecure
+      traefik.http.routers.vaultwarden-local.service: vaultwarden
+      traefik.http.routers.vaultwarden-local.tls: true
+      runtipi.managed: true
+ 
+```
