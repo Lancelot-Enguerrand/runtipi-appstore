@@ -1,30 +1,102 @@
-# Linkwarden
 
-## [](https://github.com/linkwarden/linkwarden#intro--motivation)Intro & motivation
-
-**Linkwarden is a self-hosted, open-source collaborative bookmark manager to collect, organize and archive webpages.** The objective is to organize useful webpages and articles you find across the web in one place, and since useful webpages can go away (see the inevitability of [Link Rot](https://www.howtogeek.com/786227/what-is-link-rot-and-how-does-it-threaten-the-web/)), Linkwarden also saves a copy of each webpage as a Screenshot and PDF, ensuring accessibility even if the original content is no longer available.
-
-Additionally, Linkwarden is designed with collaboration in mind, sharing links with the public and/or allowing multiple users to work together seamlessly.
-
-[![](https://github.com/linkwarden/linkwarden/raw/main/assets/showcase_image.png)](https://github.com/linkwarden/linkwarden/blob/main/assets/showcase_image.png)
-
-**A bit of a "history"** Linkwarden has been completely rebuilt and redesigned from ground up, so pretty much the only thing it has in common with its predecessor is the idea behind it - bookmark management.
-
-## Features
-
--   ✅ Auto capture a screenshot and a PDF of each link.
--   ✅ Organize links by collection, name, description and multiple tags.
--   ✅ Collaborate on gathering links in a collection.
--   ✅ Customize the permissions of each member.
--   ✅ Share your collected links with the world.
--   ✅ Search, filter and sort by link details.
--   ✅ Responsive design and supports most browsers.
-
-
-## Screenshots
-
-[![](https://github.com/linkwarden/linkwarden/raw/main/assets/collections.png)](https://github.com/linkwarden/linkwarden/blob/main/assets/collections.png)
-
-[![](https://github.com/linkwarden/linkwarden/raw/main/assets/collaborators.png)](https://github.com/linkwarden/linkwarden/blob/main/assets/collaborators.png)
-
-[![](https://github.com/linkwarden/linkwarden/raw/main/assets/link_details.png)](https://github.com/linkwarden/linkwarden/blob/main/assets/link_details.png)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "linkwarden",
+      "image": "ghcr.io/linkwarden/linkwarden:v2.8.4",
+      "isMain": true,
+      "internalPort": 3000,
+      "environment": {
+        "DATABASE_URL": "postgresql://tipi:${LINKWARDEN_DB_PASSWORD}@linkwarden-db:5432/linkwarden",
+        "NEXTAUTH_SECRET": "${LINKWARDEN_NEXTAUTH_SECRET}",
+        "NEXTAUTH_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}/api/v1/auth",
+        "NEXT_PUBLIC_DISABLE_REGISTRATION": "${LINKWARDEN_NEXT_PUBLIC_DISABLE_REGISTRATION}"
+      },
+      "dependsOn": [
+        "linkwarden-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/linkwarden",
+          "containerPath": "/data/data"
+        }
+      ]
+    },
+    {
+      "name": "linkwarden-db",
+      "image": "postgres:16-alpine",
+      "environment": {
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_PASSWORD": "${LINKWARDEN_DB_PASSWORD}",
+        "POSTGRES_DB": "linkwarden"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  linkwarden:
+    image: ghcr.io/linkwarden/linkwarden:v2.8.4
+    container_name: linkwarden
+    environment:
+    - DATABASE_URL=postgresql://tipi:${LINKWARDEN_DB_PASSWORD}@linkwarden-db:5432/linkwarden
+    - NEXTAUTH_SECRET=${LINKWARDEN_NEXTAUTH_SECRET}
+    - NEXTAUTH_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/api/v1/auth
+    - NEXT_PUBLIC_DISABLE_REGISTRATION=${LINKWARDEN_NEXT_PUBLIC_DISABLE_REGISTRATION}
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/linkwarden:/data/data
+    ports:
+    - ${APP_PORT}:3000
+    depends_on:
+    - linkwarden-db
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.linkwarden-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.linkwarden.loadbalancer.server.port: 3000
+      traefik.http.routers.linkwarden-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.linkwarden-insecure.entrypoints: web
+      traefik.http.routers.linkwarden-insecure.service: linkwarden
+      traefik.http.routers.linkwarden-insecure.middlewares: linkwarden-web-redirect
+      traefik.http.routers.linkwarden.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.linkwarden.entrypoints: websecure
+      traefik.http.routers.linkwarden.service: linkwarden
+      traefik.http.routers.linkwarden.tls.certresolver: myresolver
+      traefik.http.routers.linkwarden-local-insecure.rule: Host(`linkwarden.${LOCAL_DOMAIN}`)
+      traefik.http.routers.linkwarden-local-insecure.entrypoints: web
+      traefik.http.routers.linkwarden-local-insecure.service: linkwarden
+      traefik.http.routers.linkwarden-local-insecure.middlewares: linkwarden-web-redirect
+      traefik.http.routers.linkwarden-local.rule: Host(`linkwarden.${LOCAL_DOMAIN}`)
+      traefik.http.routers.linkwarden-local.entrypoints: websecure
+      traefik.http.routers.linkwarden-local.service: linkwarden
+      traefik.http.routers.linkwarden-local.tls: true
+      runtipi.managed: true
+  linkwarden-db:
+    container_name: linkwarden-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+    - POSTGRES_USER=tipi
+    - POSTGRES_PASSWORD=${LINKWARDEN_DB_PASSWORD}
+    - POSTGRES_DB=linkwarden
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
