@@ -1,5 +1,74 @@
-# Pinchflat
 
-Your next YouTube media manager
-
-Pinchflat is a self-hosted app for downloading YouTube content built using yt-dlp. It's designed to be lightweight, self-contained, and easy to use. You set up rules for how to download content from YouTube channels or playlists and it'll do the rest, checking periodically for new content. It's perfect for people who want to download content for use in with a media center app (Plex, Jellyfin, Kodi) or for those who want to archive media!
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "pinchflat",
+      "image": "keglin/pinchflat:v2024.12.10",
+      "isMain": true,
+      "internalPort": 8945,
+      "environment": {
+        "BASIC_AUTH_USERNAME": "${PINCHFLAT_BASIC_AUTH_USERNAME}",
+        "BASIC_AUTH_PASSWORD": "${PINCHFLAT_BASIC_AUTH_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/downloads",
+          "containerPath": "/downloads"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  pinchflat:
+    image: keglin/pinchflat:v2024.12.10
+    container_name: pinchflat
+    environment:
+    - BASIC_AUTH_USERNAME=${PINCHFLAT_BASIC_AUTH_USERNAME}
+    - BASIC_AUTH_PASSWORD=${PINCHFLAT_BASIC_AUTH_PASSWORD}
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8945
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${APP_DATA_DIR}/data/downloads:/downloads
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.pinchflat-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.pinchflat.loadbalancer.server.port: 8945
+      traefik.http.routers.pinchflat-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.pinchflat-insecure.entrypoints: web
+      traefik.http.routers.pinchflat-insecure.service: pinchflat
+      traefik.http.routers.pinchflat-insecure.middlewares: pinchflat-web-redirect
+      traefik.http.routers.pinchflat.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.pinchflat.entrypoints: websecure
+      traefik.http.routers.pinchflat.service: pinchflat
+      traefik.http.routers.pinchflat.tls.certresolver: myresolver
+      traefik.http.routers.pinchflat-local-insecure.rule: Host(`pinchflat.${LOCAL_DOMAIN}`)
+      traefik.http.routers.pinchflat-local-insecure.entrypoints: web
+      traefik.http.routers.pinchflat-local-insecure.service: pinchflat
+      traefik.http.routers.pinchflat-local-insecure.middlewares: pinchflat-web-redirect
+      traefik.http.routers.pinchflat-local.rule: Host(`pinchflat.${LOCAL_DOMAIN}`)
+      traefik.http.routers.pinchflat-local.entrypoints: websecure
+      traefik.http.routers.pinchflat-local.service: pinchflat
+      traefik.http.routers.pinchflat-local.tls: true
+      runtipi.managed: true
+ 
+```
