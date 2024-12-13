@@ -1,24 +1,224 @@
-- The [demo is available here](https://demo2.librephotos.com/). User is ```demo```, password is ```demo1234```.
-- You can watch development videos on [Niaz Faridani-Rad's channel](https://www.youtube.com/channel/UCZJ2pk2BPKxwbuCV9LWDR0w)
-- You can join our [Discord](https://discord.gg/xwRvtSDGWb).
 
-![](https://github.com/LibrePhotos/librephotos/blob/dev/screenshots/mockups_main_fhd.png?raw=true)
-<sub>Mockup designed by rawpixel.com / Freepik</sub>
-
-## Installation
-
-Step-by-step installation instructions are available in our [documentation](https://docs.librephotos.com/1/)
-
-## Features
-
-  - Support for all types of photos including raw photos
-  - Support for videos
-  - Timeline view
-  - Scans pictures on the file system
-  - Multiuser support
-  - Generate albums based on events like "Thursday in Berlin"
-  - Face recognition / Face classification
-  - Reverse geocoding
-  - Object / Scene detection
-  - Semantic image search
-  - Search by metadata
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "librephotos",
+      "image": "reallibrephotos/librephotos-proxy:2023w48",
+      "isMain": true,
+      "internalPort": 80,
+      "dependsOn": [
+        "librephotos-backend",
+        "librephotos-frontend"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/scan",
+          "containerPath": "/data"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/protected_media",
+          "containerPath": "/protected_media"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/proxy/nginx.conf",
+          "containerPath": "/etc/nginx/nginx.conf",
+          "readOnly": true
+        }
+      ]
+    },
+    {
+      "name": "librephotos-db",
+      "image": "postgres:14",
+      "environment": {
+        "POSTGRES_PASSWORD": "${LIBREPHOTOS_DB_PASSWORD}",
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_DB": "librephotos"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "healthCheck": {
+        "interval": "5s",
+        "timeout": "5s",
+        "retries": 5,
+        "test": "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      }
+    },
+    {
+      "name": "librephotos-frontend",
+      "image": "reallibrephotos/librephotos-frontend:2023w48",
+      "dependsOn": [
+        "librephotos-backend"
+      ]
+    },
+    {
+      "name": "librephotos-backend",
+      "image": "reallibrephotos/librephotos:2023w48",
+      "environment": {
+        "SECRET_KEY": "${LIBREPHOTOS_SECRET_KEY}",
+        "BACKEND_HOST": "librephotos-backend",
+        "ADMIN_EMAIL": "${LIBREPHOTOS_EMAIL}",
+        "ADMIN_USERNAME": "${LIBREPHOTOS_USERNAME}",
+        "ADMIN_PASSWORD": "${LIBREPHOTOS_PASSWORD}",
+        "DB_BACKEND": "postgresql",
+        "DB_NAME": "librephotos",
+        "DB_USER": "tipi",
+        "DB_PASS": "${LIBREPHOTOS_DB_PASSWORD}",
+        "DB_HOST": "librephotos-db",
+        "DB_PORT": "5432",
+        "REDIS_HOST": "librephotos-redis",
+        "REDIS_PORT": "6379",
+        "ALLOW_UPLOAD": "true",
+        "DEBUG": "0",
+        "CSRF_TRUSTED_ORIGINS": "${APP_PROTOCOL:-http}://${APP_DOMAIN},http://${INTERNAL_IP}:${APP_PORT}"
+      },
+      "dependsOn": {
+        "librephotos-db": {
+          "condition": "service_healthy"
+        }
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/scan",
+          "containerPath": "/data"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/protected_media",
+          "containerPath": "/protected_media"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/logs",
+          "containerPath": "/logs"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/cache",
+          "containerPath": "/root/.cache"
+        }
+      ]
+    },
+    {
+      "name": "librephotos-redis",
+      "image": "redis:6"
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  librephotos:
+    image: reallibrephotos/librephotos-proxy:2023w48
+    container_name: librephotos
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/scan:/data
+    - ${APP_DATA_DIR}/data/protected_media:/protected_media
+    - ${APP_DATA_DIR}/data/proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+    - ${APP_PORT}:80
+    depends_on:
+    - librephotos-backend
+    - librephotos-frontend
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.librephotos-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.librephotos.loadbalancer.server.port: 80
+      traefik.http.routers.librephotos-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.librephotos-insecure.entrypoints: web
+      traefik.http.routers.librephotos-insecure.service: librephotos
+      traefik.http.routers.librephotos-insecure.middlewares: librephotos-web-redirect
+      traefik.http.routers.librephotos.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.librephotos.entrypoints: websecure
+      traefik.http.routers.librephotos.service: librephotos
+      traefik.http.routers.librephotos.tls.certresolver: myresolver
+      traefik.http.routers.librephotos-local-insecure.rule: Host(`librephotos.${LOCAL_DOMAIN}`)
+      traefik.http.routers.librephotos-local-insecure.entrypoints: web
+      traefik.http.routers.librephotos-local-insecure.service: librephotos
+      traefik.http.routers.librephotos-local-insecure.middlewares: librephotos-web-redirect
+      traefik.http.routers.librephotos-local.rule: Host(`librephotos.${LOCAL_DOMAIN}`)
+      traefik.http.routers.librephotos-local.entrypoints: websecure
+      traefik.http.routers.librephotos-local.service: librephotos
+      traefik.http.routers.librephotos-local.tls: true
+      runtipi.managed: true
+  librephotos-db:
+    image: postgres:14
+    container_name: librephotos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${LIBREPHOTOS_DB_PASSWORD}
+      POSTGRES_USER: tipi
+      POSTGRES_DB: librephotos
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  librephotos-frontend:
+    image: reallibrephotos/librephotos-frontend:2023w48
+    container_name: librephotos-frontend
+    restart: unless-stopped
+    depends_on:
+    - librephotos-backend
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  librephotos-backend:
+    image: reallibrephotos/librephotos:2023w48
+    container_name: librephotos-backend
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/scan:/data
+    - ${APP_DATA_DIR}/data/protected_media:/protected_media
+    - ${APP_DATA_DIR}/data/logs:/logs
+    - ${APP_DATA_DIR}/data/cache:/root/.cache
+    environment:
+    - SECRET_KEY=${LIBREPHOTOS_SECRET_KEY}
+    - BACKEND_HOST=librephotos-backend
+    - ADMIN_EMAIL=${LIBREPHOTOS_EMAIL}
+    - ADMIN_USERNAME=${LIBREPHOTOS_USERNAME}
+    - ADMIN_PASSWORD=${LIBREPHOTOS_PASSWORD}
+    - DB_BACKEND=postgresql
+    - DB_NAME=librephotos
+    - DB_USER=tipi
+    - DB_PASS=${LIBREPHOTOS_DB_PASSWORD}
+    - DB_HOST=librephotos-db
+    - DB_PORT=5432
+    - REDIS_HOST=librephotos-redis
+    - REDIS_PORT=6379
+    - ALLOW_UPLOAD=true
+    - DEBUG=0
+    - CSRF_TRUSTED_ORIGINS=${APP_PROTOCOL:-http}://${APP_DOMAIN},http://${INTERNAL_IP}:${APP_PORT}
+    depends_on:
+      librephotos-db:
+        condition: service_healthy
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  librephotos-redis:
+    image: redis:6
+    container_name: librephotos-redis
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
