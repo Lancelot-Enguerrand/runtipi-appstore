@@ -1,21 +1,100 @@
-HedgeDoc lets you create real-time collaborative markdown notes.
 
-## Getting Started
-
-- ℹ️ Read all about HedgeDoc and the history of the project on [our website](https://hedgedoc.org)
-- 🧪 Try out HedgeDoc with the [demo instance][hedgedoc-demo]. Check out the [features page][hedgedoc-demo-features]!
-- 💽 Install HedgeDoc yourself using the [install guide](https://docs.hedgedoc.org/setup/getting-started/)
-- ❓ Questions? Join our [Matrix chat][matrix.org-url] or the [community forums][hedgedoc-community]
-- 💬 Stay up to date by subscribing to the [release feed][github-release-feed]
-
-## State of the project
-
-HedgeDoc 1.x is stable and used around the world, but the codebase has [grown over time](https://hedgedoc.org/history/),
-making it hard to add new features.  
-We are currently working on HedgeDoc 2, a complete rewrite of HedgeDoc. Please note the following:
-
-- This branch contains the latest development code and does not implement all features yet.
-  **If you are looking for the 1.x source code, have a look at the [master branch](https://github.com/hedgedoc/hedgedoc/tree/master).**
-- The 1.x release is maintenance-only. We do not accept feature requests or PRs for this release anymore and may choose
-  to close non-critical bug reports, if the bug will be non-existent in 2.0.
-- HedgeDoc 2 will be split in two components. The backend and the frontend. Both are present in this repository.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "hedgedoc",
+      "image": "quay.io/hedgedoc/hedgedoc:1.10.0",
+      "isMain": true,
+      "internalPort": 3000,
+      "environment": {
+        "CMD_DB_URL": "postgres://hedgedoc:${HEDGEDOC_DB_PASSWORD}@hedgedoc-db:5432/hedgedoc",
+        "CMD_DOMAIN": "${APP_DOMAIN}",
+        "CMD_URL_ADDPORT": "${HEDGEDOC_ADDPORT}"
+      },
+      "dependsOn": [
+        "hedgedoc-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/hedgedoc-uploads",
+          "containerPath": "/hedgedoc/public/uploads"
+        }
+      ]
+    },
+    {
+      "name": "hedgedoc-db",
+      "image": "postgres:13.4-alpine",
+      "environment": {
+        "POSTGRES_USER": "hedgedoc",
+        "POSTGRES_PASSWORD": "${HEDGEDOC_DB_PASSWORD}",
+        "POSTGRES_DB": "hedgedoc"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  hedgedoc:
+    container_name: hedgedoc
+    image: quay.io/hedgedoc/hedgedoc:1.10.0
+    environment:
+    - CMD_DB_URL=postgres://hedgedoc:${HEDGEDOC_DB_PASSWORD}@hedgedoc-db:5432/hedgedoc
+    - CMD_DOMAIN=${APP_DOMAIN}
+    - CMD_URL_ADDPORT=${HEDGEDOC_ADDPORT}
+    volumes:
+    - ${APP_DATA_DIR}/data/hedgedoc-uploads:/hedgedoc/public/uploads
+    ports:
+    - ${APP_PORT}:3000
+    restart: always
+    depends_on:
+    - hedgedoc-db
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.hedgedoc-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.hedgedoc.loadbalancer.server.port: 3000
+      traefik.http.routers.hedgedoc-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hedgedoc-insecure.entrypoints: web
+      traefik.http.routers.hedgedoc-insecure.service: hedgedoc
+      traefik.http.routers.hedgedoc-insecure.middlewares: hedgedoc-web-redirect
+      traefik.http.routers.hedgedoc.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hedgedoc.entrypoints: websecure
+      traefik.http.routers.hedgedoc.service: hedgedoc
+      traefik.http.routers.hedgedoc.tls.certresolver: myresolver
+      traefik.http.routers.hedgedoc-local-insecure.rule: Host(`hedgedoc.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hedgedoc-local-insecure.entrypoints: web
+      traefik.http.routers.hedgedoc-local-insecure.service: hedgedoc
+      traefik.http.routers.hedgedoc-local-insecure.middlewares: hedgedoc-web-redirect
+      traefik.http.routers.hedgedoc-local.rule: Host(`hedgedoc.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hedgedoc-local.entrypoints: websecure
+      traefik.http.routers.hedgedoc-local.service: hedgedoc
+      traefik.http.routers.hedgedoc-local.tls: true
+      runtipi.managed: true
+  hedgedoc-db:
+    container_name: hedgedoc-db
+    image: postgres:13.4-alpine
+    restart: unless-stopped
+    environment:
+    - POSTGRES_USER=hedgedoc
+    - POSTGRES_PASSWORD=${HEDGEDOC_DB_PASSWORD}
+    - POSTGRES_DB=hedgedoc
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
