@@ -1,36 +1,148 @@
-# Tandoor Recipes
 
-The recipe manager that allows you to manage your ever growing collection of digital recipes.
-
-## Core Features
-- 🥗 **Manage your recipes** - Manage your ever growing recipe collection
-- 📆 **Plan** - multiple meals for each day
-- 🛒 **Shopping lists** - via the meal plan or straight from recipes
-- 📚 **Cookbooks** - collect recipes into books
-- 👪 **Share and collaborate** on recipes with friends and family
-
-## Made by and for power users
-
-- 🔍 Powerful & customizable **search** with fulltext support and [TrigramSimilarity](https://docs.djangoproject.com/en/3.0/ref/contrib/postgres/search/#trigram-similarity)
-- 🏷️ Create and search for **tags**, assign them in batch to all files matching certain filters
-- ↔️ Quickly merge and rename ingredients, tags and units 
-- 📥️ **Import recipes** from thousands of websites supporting [ld+json or microdata](https://schema.org/Recipe)
-- ➗ Support for **fractions** or decimals
-- 🐳 Easy setup with **Docker** and included examples for **Kubernetes**, **Unraid** and **Synology**
-- 🎨 Customize your interface with **themes**
-- 📦 **Sync** files with Dropbox and Nextcloud
-  
-## All the must haves
-
-- 📱Optimized for use on **mobile** devices
-- 🌍 localized in many languages thanks to the awesome community
-- 📥️ **Import your collection** from many other [recipe managers](https://docs.tandoor.dev/features/import_export/)
-- ➕ Many more like recipe scaling, image compression, printing views and supermarkets
-
-This application is meant for people with a collection of recipes they want to share with family and friends or simply
-store them in a nicely organized way. A basic permission system exists but this application is not meant to be run as 
-a public page.
-
-## Docs
-
-Documentation can be found [here](https://docs.tandoor.dev/).
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "tandoor",
+      "image": "ghcr.io/tandoorrecipes/recipes:1.5.24",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "SECRET_KEY": "${TANDOOR_SECRET_KEY}",
+        "DB_ENGINE": "django.db.backends.postgresql",
+        "POSTGRES_HOST": "tandoor-db",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_USER": "tandoor",
+        "POSTGRES_PASSWORD": "${TANDOOR_POSTGRESS_PASSWORD}",
+        "POSTGRES_DB": "tandoordb"
+      },
+      "dependsOn": {
+        "tandoor-db": {
+          "condition": "service_healthy"
+        }
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/staticfiles",
+          "containerPath": "/opt/recipes/staticfiles"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/mediafiles",
+          "containerPath": "/opt/recipes/mediafiles"
+        }
+      ],
+      "healthCheck": {
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s",
+        "test": "wget --no-verbose --tries=1 --spider http://localhost:8080"
+      }
+    },
+    {
+      "name": "tandoor-db",
+      "image": "postgres:15-alpine",
+      "environment": {
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_USER": "tandoor",
+        "POSTGRES_PASSWORD": "${TANDOOR_POSTGRESS_PASSWORD}",
+        "POSTGRES_DB": "tandoordb"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgresql",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "healthCheck": {
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s",
+        "test": "pg_isready -d tandoor"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  tandoor:
+    container_name: tandoor
+    image: ghcr.io/tandoorrecipes/recipes:1.5.24
+    volumes:
+    - ${APP_DATA_DIR}/data/staticfiles:/opt/recipes/staticfiles
+    - ${APP_DATA_DIR}/data/mediafiles:/opt/recipes/mediafiles
+    ports:
+    - ${APP_PORT}:8080
+    environment:
+    - SECRET_KEY=${TANDOOR_SECRET_KEY}
+    - DB_ENGINE=django.db.backends.postgresql
+    - POSTGRES_HOST=tandoor-db
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=tandoor
+    - POSTGRES_PASSWORD=${TANDOOR_POSTGRESS_PASSWORD}
+    - POSTGRES_DB=tandoordb
+    networks:
+    - tipi_main_network
+    restart: unless-stopped
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.tandoor-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.tandoor.loadbalancer.server.port: 8080
+      traefik.http.routers.tandoor-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.tandoor-insecure.entrypoints: web
+      traefik.http.routers.tandoor-insecure.service: tandoor
+      traefik.http.routers.tandoor-insecure.middlewares: tandoor-web-redirect
+      traefik.http.routers.tandoor.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.tandoor.entrypoints: websecure
+      traefik.http.routers.tandoor.service: tandoor
+      traefik.http.routers.tandoor.tls.certresolver: myresolver
+      traefik.http.routers.tandoor-local-insecure.rule: Host(`tandoor.${LOCAL_DOMAIN}`)
+      traefik.http.routers.tandoor-local-insecure.entrypoints: web
+      traefik.http.routers.tandoor-local-insecure.service: tandoor
+      traefik.http.routers.tandoor-local-insecure.middlewares: tandoor-web-redirect
+      traefik.http.routers.tandoor-local.rule: Host(`tandoor.${LOCAL_DOMAIN}`)
+      traefik.http.routers.tandoor-local.entrypoints: websecure
+      traefik.http.routers.tandoor-local.service: tandoor
+      traefik.http.routers.tandoor-local.tls: true
+      runtipi.managed: true
+    depends_on:
+      tandoor-db:
+        condition: service_healthy
+  tandoor-db:
+    image: postgres:15-alpine
+    container_name: tandoor-db
+    volumes:
+    - ${APP_DATA_DIR}/data/postgresql:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=tandoor
+    - POSTGRES_PASSWORD=${TANDOOR_POSTGRESS_PASSWORD}
+    - POSTGRES_DB=tandoordb
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready
+      - -d
+      - tandoor
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      runtipi.managed: true
+ 
+```
