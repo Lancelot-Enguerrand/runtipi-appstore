@@ -1,12 +1,71 @@
-## Emby
 
-Bringing all of your home videos, music, and photos together into one place has never been easier. Your personal Emby Server automatically converts and streams your media on-the-fly to play on any device.
-
-![Emby](https://emby.media/resources/Screenshot_2015-09-28-22-42-491.png)
-
-### Folder Info
-
-| Root Folder                            | Container Folder |
-|----------------------------------------|------------------|
-| /runtipi/app-data/emby/data/config     | /config          |
-| /runtipi/media/data                    | /media/data      |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "emby",
+      "image": "lscr.io/linuxserver/emby:4.8.10",
+      "isMain": true,
+      "internalPort": 8096,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/data",
+          "containerPath": "/media/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  emby:
+    image: lscr.io/linuxserver/emby:4.8.10
+    container_name: emby
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${ROOT_FOLDER_HOST}/media/data:/media/data
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8096
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.emby-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.emby.loadbalancer.server.port: 8096
+      traefik.http.routers.emby-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.emby-insecure.entrypoints: web
+      traefik.http.routers.emby-insecure.service: emby
+      traefik.http.routers.emby-insecure.middlewares: emby-web-redirect
+      traefik.http.routers.emby.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.emby.entrypoints: websecure
+      traefik.http.routers.emby.service: emby
+      traefik.http.routers.emby.tls.certresolver: myresolver
+      traefik.http.routers.emby-local-insecure.rule: Host(`emby.${LOCAL_DOMAIN}`)
+      traefik.http.routers.emby-local-insecure.entrypoints: web
+      traefik.http.routers.emby-local-insecure.service: emby
+      traefik.http.routers.emby-local-insecure.middlewares: emby-web-redirect
+      traefik.http.routers.emby-local.rule: Host(`emby.${LOCAL_DOMAIN}`)
+      traefik.http.routers.emby-local.entrypoints: websecure
+      traefik.http.routers.emby-local.service: emby
+      traefik.http.routers.emby-local.tls: true
+      runtipi.managed: true
+ 
+```
