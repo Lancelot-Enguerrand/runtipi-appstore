@@ -1,49 +1,90 @@
-## About The Project
 
-Hammond is a self hosted vehicle management system to track fuel and other expenses related to all of your vehicles. 
-It supports multiple users sharing multiple vehicles. 
-It is the logical successor to Clarkson which has not been updated for quite some time now. 
-This repo is again a fork of akhilrex's great [project](https://github.com/akhilrex/hammond).
-
-### Motivation and Developer Notes
-
-As mentioned, this project is a fork of akhilrex's [project](https://github.com/akhilrex/hammond) which is no longer active. 
-To prevent the same from happeing to this project, we are seeking to add more maintainers/collaborators who have access to merge PRs.
-
-We are trying our best to update with new features and feedback is very welcome.
-
-The project is written using Go for the backend and Vuejs for the front end. 
-
-### Built With
-
-- [Go](https://golang.org/)
-- [Go-Gin](https://github.com/gin-gonic/gin)
-- [GORM](https://github.com/go-gorm/gorm)
-- [SQLite](https://www.sqlite.org/index.html)
-- [VueJS](https://vuejs.org/)
-- [Vuex](https://vuex.vuejs.org/)
-- [Buefy](https://buefy.org/)
-
-#### Fresh setup
-
-You will have to provide your name, email and password so that an admin user can be created for you.
-
-Once done you will be taken to the login page.
-
-Go through the settings page once and change relevant settings before you start adding vehicles and expenses.
-
-## License
-
-Distributed under the GPL-3.0 License. See `LICENSE` for more information.
-
-## Roadmap
-
-- [ ] More reports
-- [ ] Vehicle specific reminders (servicing etc)
-- [ ] Native installer for Windows/Linux/MacOS
-
-## Contact
-
-Project Link: [https://github.com/AlfHou/hammond](https://github.com/AlfHou/hammond)
-
-[product-screenshot]: images/screenshot.jpg
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "hammond",
+      "image": "alfhou/hammond:v0.0.24",
+      "isMain": true,
+      "internalPort": 3000,
+      "environment": {
+        "TZ": "${HAMMOND_TZ-Europe/Paris}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/assets",
+          "containerPath": "/assets"
+        },
+        {
+          "hostPath": "/etc/timezone",
+          "containerPath": "/etc/timezone"
+        },
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime"
+        }
+      ],
+      "healthCheck": {
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s",
+        "test": "wget --no-verbose --tries=1 --spider http://localhost:3000"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.8'
+services:
+  hammond:
+    container_name: hammond
+    image: alfhou/hammond:v0.0.24
+    ports:
+    - ${APP_PORT}:3000
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${APP_DATA_DIR}/data/assets:/assets
+    - /etc/timezone:/etc/timezone
+    - /etc/localtime:/etc/localtime
+    environment:
+    - TZ=${HAMMOND_TZ-Europe/Paris}
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.hammond-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.hammond.loadbalancer.server.port: 3000
+      traefik.http.routers.hammond-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hammond-insecure.entrypoints: web
+      traefik.http.routers.hammond-insecure.service: hammond
+      traefik.http.routers.hammond-insecure.middlewares: hammond-web-redirect
+      traefik.http.routers.hammond.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hammond.entrypoints: websecure
+      traefik.http.routers.hammond.service: hammond
+      traefik.http.routers.hammond.tls.certresolver: myresolver
+      traefik.http.routers.hammond-local-insecure.rule: Host(`hammond.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hammond-local-insecure.entrypoints: web
+      traefik.http.routers.hammond-local-insecure.service: hammond
+      traefik.http.routers.hammond-local-insecure.middlewares: hammond-web-redirect
+      traefik.http.routers.hammond-local.rule: Host(`hammond.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hammond-local.entrypoints: websecure
+      traefik.http.routers.hammond-local.service: hammond
+      traefik.http.routers.hammond-local.tls: true
+      runtipi.managed: true
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3000
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+ 
+```
