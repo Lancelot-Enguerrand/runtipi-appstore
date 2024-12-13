@@ -1,19 +1,62 @@
-# <div align="center"><img  src="https://user-images.githubusercontent.com/58886915/166198400-c2134044-1198-4647-a8b6-da9c4a204c68.svg" width="40"/> </br>Pingvin Share</div>
 
-Pingvin Share is self-hosted file sharing platform and an alternative for WeTransfer.
-
-## ✨ Features
-
-- Share files using a link
-- Unlimited file size (restricted only by disk space)
-- Set an expiration date for shares
-- Secure shares with visitor limits and passwords
-- Email recipients
-- Integration with ClamAV for security scans
-
-## 🐧 Get to know Pingvin Share
-
-- [Demo](https://pingvin-share.dev.eliasschneider.com)
-- [Review by DB Tech](https://www.youtube.com/watch?v=rWwNeZCOPJA)
-
-<img src="https://user-images.githubusercontent.com/58886915/225038319-b2ef742c-3a74-4eb6-9689-4207a36842a4.png" width="700"/>
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "pingvin-share",
+      "image": "stonith404/pingvin-share:v1.6.1",
+      "isMain": true,
+      "internalPort": 3000,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/opt/app/backend/data"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/images",
+          "containerPath": "/opt/app/frontend/public/img"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  pingvin-share:
+    container_name: pingvin-share
+    image: stonith404/pingvin-share:v1.6.1
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:3000
+    volumes:
+    - ${APP_DATA_DIR}/data:/opt/app/backend/data
+    - ${APP_DATA_DIR}/data/images:/opt/app/frontend/public/img
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.pingvin-share-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.pingvin-share.loadbalancer.server.port: 3000
+      traefik.http.routers.pingvin-share-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.pingvin-share-insecure.entrypoints: web
+      traefik.http.routers.pingvin-share-insecure.service: pingvin-share
+      traefik.http.routers.pingvin-share-insecure.middlewares: pingvin-share-web-redirect
+      traefik.http.routers.pingvin-share.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.pingvin-share.entrypoints: websecure
+      traefik.http.routers.pingvin-share.service: pingvin-share
+      traefik.http.routers.pingvin-share.tls.certresolver: myresolver
+      traefik.http.routers.pingvin-share-local-insecure.rule: Host(`pingvin-share.${LOCAL_DOMAIN}`)
+      traefik.http.routers.pingvin-share-local-insecure.entrypoints: web
+      traefik.http.routers.pingvin-share-local-insecure.service: pingvin-share
+      traefik.http.routers.pingvin-share-local-insecure.middlewares: pingvin-share-web-redirect
+      traefik.http.routers.pingvin-share-local.rule: Host(`pingvin-share.${LOCAL_DOMAIN}`)
+      traefik.http.routers.pingvin-share-local.entrypoints: websecure
+      traefik.http.routers.pingvin-share-local.service: pingvin-share
+      traefik.http.routers.pingvin-share-local.tls: true
+      runtipi.managed: true
+ 
+```
