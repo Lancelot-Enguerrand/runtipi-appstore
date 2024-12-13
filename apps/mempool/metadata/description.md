@@ -1,12 +1,166 @@
-## Explore the Bitcoin ecosystem with mempool
 
-Mempool is the fully-featured mempool visualizer, explorer, and API service running at mempool.space.
-
-It is an open-source project developed and operated for the benefit of the Bitcoin community, with a focus on the emerging transaction fee market that is evolving Bitcoin into a multi-layer ecosystem.
-
-## Required apps
-To be able to run mempool, you need to install this apps first:
-- Bitcoin: [Install here](/app-store/bitcoind)
-- Electrs: [Install here](/app-store/electrs)
-
-<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2J3bWNwZ3N4a2FodjBmdTJoa3RubWVka2dvOXByc3VsenowdGdoaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/hrpYgIn4o6tja5acUn/giphy.gif" alt="drawing" width="800"/>
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "mempool",
+      "image": "mempool/frontend:v3.0.1",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "FRONTEND_HTTP_PORT": "8080",
+        "BACKEND_MAINNET_HTTP_HOST": "mempool-api"
+      },
+      "dependsOn": [
+        "mempool-db"
+      ],
+      "command": "nginx -g 'daemon off;'",
+      "stop_grace_period": "1m"
+    },
+    {
+      "name": "mempool-api",
+      "image": "mempool/backend:v3.0.1",
+      "user": "0:0",
+      "environment": {
+        "MEMPOOL_BACKEND": "electrum",
+        "ELECTRUM_HOST": "${ELECTRUM_HOST:-electrs}",
+        "ELECTRUM_PORT": "${ELECTRUM_PORT:-50001}",
+        "ELECTRUM_TLS_ENABLED": "false",
+        "CORE_RPC_HOST": "${CORE_RPC_HOST:-bitcoind}",
+        "CORE_RPC_PORT": "8332",
+        "CORE_RPC_COOKIE": true,
+        "CORE_RPC_COOKIE_PATH": "/data/.bitcoin/.cookie",
+        "CORE_RPC_TIMEOUT": "60000",
+        "DATABASE_ENABLED": "true",
+        "DATABASE_HOST": "mempool-db",
+        "DATABASE_DATABASE": "mempool",
+        "DATABASE_USERNAME": "mempool",
+        "DATABASE_PASSWORD": "${MEMPOOL_DB_PASSWORD}",
+        "STATISTICS_ENABLED": "true"
+      },
+      "dependsOn": [
+        "mempool-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${BITCOIND_DIR",
+          "containerPath": "-${APP_DATA_DIR}/../bitcoind/data}"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/backend/cache"
+        }
+      ],
+      "command": "./start.sh",
+      "stop_grace_period": "1m"
+    },
+    {
+      "name": "mempool-db",
+      "image": "mariadb:10.5.21",
+      "environment": {
+        "MYSQL_DATABASE": "mempool",
+        "MYSQL_USER": "mempool",
+        "MYSQL_PASSWORD": "${MEMPOOL_DB_PASSWORD}",
+        "MYSQL_ROOT_PASSWORD": "${MEMPOOL_DB_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/lib/mysql"
+        }
+      ],
+      "stop_grace_period": "1m"
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  mempool:
+    container_name: mempool
+    image: mempool/frontend:v3.0.1
+    restart: unless-stopped
+    stop_grace_period: 1m
+    command: nginx -g 'daemon off;'
+    ports:
+    - ${APP_PORT}:8080
+    depends_on:
+    - mempool-db
+    environment:
+      FRONTEND_HTTP_PORT: '8080'
+      BACKEND_MAINNET_HTTP_HOST: mempool-api
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.mempool-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.mempool.loadbalancer.server.port: 8080
+      traefik.http.routers.mempool-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mempool-insecure.entrypoints: web
+      traefik.http.routers.mempool-insecure.service: mempool
+      traefik.http.routers.mempool-insecure.middlewares: mempool-web-redirect
+      traefik.http.routers.mempool.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mempool.entrypoints: websecure
+      traefik.http.routers.mempool.service: mempool
+      traefik.http.routers.mempool.tls.certresolver: myresolver
+      traefik.http.routers.mempool-local-insecure.rule: Host(`mempool.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mempool-local-insecure.entrypoints: web
+      traefik.http.routers.mempool-local-insecure.service: mempool
+      traefik.http.routers.mempool-local-insecure.middlewares: mempool-web-redirect
+      traefik.http.routers.mempool-local.rule: Host(`mempool.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mempool-local.entrypoints: websecure
+      traefik.http.routers.mempool-local.service: mempool
+      traefik.http.routers.mempool-local.tls: true
+      runtipi.managed: true
+  mempool-api:
+    container_name: mempool-api
+    image: mempool/backend:v3.0.1
+    restart: unless-stopped
+    stop_grace_period: 1m
+    user: 0:0
+    volumes:
+    - ${BITCOIND_DIR:-${APP_DATA_DIR}/../bitcoind/data}:/data/.bitcoin:ro
+    - ${APP_DATA_DIR}/data:/backend/cache
+    command: ./start.sh
+    depends_on:
+    - mempool-db
+    environment:
+      MEMPOOL_BACKEND: electrum
+      ELECTRUM_HOST: ${ELECTRUM_HOST:-electrs}
+      ELECTRUM_PORT: ${ELECTRUM_PORT:-50001}
+      ELECTRUM_TLS_ENABLED: 'false'
+      CORE_RPC_HOST: ${CORE_RPC_HOST:-bitcoind}
+      CORE_RPC_PORT: '8332'
+      CORE_RPC_COOKIE: true
+      CORE_RPC_COOKIE_PATH: /data/.bitcoin/.cookie
+      CORE_RPC_TIMEOUT: '60000'
+      DATABASE_ENABLED: 'true'
+      DATABASE_HOST: mempool-db
+      DATABASE_DATABASE: mempool
+      DATABASE_USERNAME: mempool
+      DATABASE_PASSWORD: ${MEMPOOL_DB_PASSWORD}
+      STATISTICS_ENABLED: 'true'
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  mempool-db:
+    container_name: mempool-db
+    image: mariadb:10.5.21
+    restart: unless-stopped
+    stop_grace_period: 1m
+    environment:
+      MYSQL_DATABASE: mempool
+      MYSQL_USER: mempool
+      MYSQL_PASSWORD: ${MEMPOOL_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MEMPOOL_DB_PASSWORD}
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/lib/mysql
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
