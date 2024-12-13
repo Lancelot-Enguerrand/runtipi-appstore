@@ -1,18 +1,72 @@
-# ✒️ Tasks.md
 
-A self-hosted file based task management board that supports Markdown syntax.
-
-![Demonstration](https://github.com/BaldissaraMatheus/Tasks.md/raw/main/public/demonstration.gif)
-
-## ⭐ Features
-
-- Create cards, lists and tags in a modern and responsive interface;
-- Write cards as Markdown files;
-- Easy to install with a single Docker image;
-- Light and dark themes synced with operating system settings;
-- Heavy customizable with 3 default color themes ([Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/named-colors.html), [Nord](https://www.nordtheme.com/) and [Catppuccin](https://github.com/catppuccin/catppuccin));
-- Support for subpath based reverse-proxy with an environment variable for base path;
-
-## 🎨 Customize
-
-All CSS files are available in the public stylesheets directory, which can be mounted as a docker volume. It already comes with 3 color themes: [Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/named-colors.html), [Nord](https://www.nordtheme.com/) and [Catppuccin](https://github.com/catppuccin/catppuccin). To use them, open the file `/stylesheets/index.css` and change the second line to the path of the color theme you want, you can find them under `/stylesheets/color-themes`.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "tasks-md",
+      "image": "baldissaramatheus/tasks.md:2.5.4",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "TITLE": "\"${TASKS_MD_TITLE}\""
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/files",
+          "containerPath": "/tasks/"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config/"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/stylesheets",
+          "containerPath": "/usr/share/nginx/html/stylesheets/"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3'
+services:
+  tasks-md:
+    container_name: tasks-md
+    image: baldissaramatheus/tasks.md:2.5.4
+    ports:
+    - ${APP_PORT}:8080
+    volumes:
+    - ${APP_DATA_DIR}/data/files:/tasks/
+    - ${APP_DATA_DIR}/data/config:/config/
+    - ${APP_DATA_DIR}/data/stylesheets:/usr/share/nginx/html/stylesheets/
+    environment:
+    - TITLE="${TASKS_MD_TITLE}"
+    networks:
+    - tipi_main_network
+    restart: unless-stopped
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.tasks-md-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.tasks-md.loadbalancer.server.port: 8080
+      traefik.http.routers.tasks-md-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.tasks-md-insecure.entrypoints: web
+      traefik.http.routers.tasks-md-insecure.service: tasks-md
+      traefik.http.routers.tasks-md-insecure.middlewares: tasks-md-web-redirect
+      traefik.http.routers.tasks-md.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.tasks-md.entrypoints: websecure
+      traefik.http.routers.tasks-md.service: tasks-md
+      traefik.http.routers.tasks-md.tls.certresolver: myresolver
+      traefik.http.routers.tasks-md-local-insecure.rule: Host(`tasks-md.${LOCAL_DOMAIN}`)
+      traefik.http.routers.tasks-md-local-insecure.entrypoints: web
+      traefik.http.routers.tasks-md-local-insecure.service: tasks-md
+      traefik.http.routers.tasks-md-local-insecure.middlewares: tasks-md-web-redirect
+      traefik.http.routers.tasks-md-local.rule: Host(`tasks-md.${LOCAL_DOMAIN}`)
+      traefik.http.routers.tasks-md-local.entrypoints: websecure
+      traefik.http.routers.tasks-md-local.service: tasks-md
+      traefik.http.routers.tasks-md-local.tls: true
+      runtipi.managed: true
+ 
+```
