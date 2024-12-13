@@ -1,17 +1,107 @@
-## Note taking and to-do application with synchronisation
 
-- **username**: admin@localhost
-- **password**: admin
-<br />
-
-Joplin is a free, open source note taking and to-do application, which can handle a large number of notes organised into notebooks. The notes are searchable, can be copied, tagged and modified either from the applications directly or from your own text editor. The notes are in Markdown format.
-
-Notes exported from Evernote can be imported into Joplin, including the formatted content (which is converted to Markdown), resources (images, attachments, etc.) and complete metadata (geolocation, updated time, created time, etc.). Plain Markdown files can also be imported.
-
-The notes can be securely synchronised using end-to-end encryption with various cloud services including Nextcloud, Dropbox, OneDrive and Joplin Cloud.
-
-Full text search is available on all platforms to quickly find the information you need. The app can be customised using plugins and themes, and you can also easily create your own.
-
-The application is available for Windows, Linux, macOS, Android and iOS. A Web Clipper, to save web pages and screenshots from your browser, is also available for Firefox and Chrome.
-
-![Screenshot](https://raw.githubusercontent.com/laurent22/joplin/dev/Assets/WebsiteAssets/images/home-top-img.png)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "joplin",
+      "image": "florider89/joplin-server:3.0.1",
+      "isMain": true,
+      "internalPort": 22300,
+      "environment": {
+        "APP_PORT": "22300",
+        "APP_BASE_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}/",
+        "DB_CLIENT": "pg",
+        "POSTGRES_PASSWORD": "${JOPLIN_DB_PASSWORD}",
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_DATABASE": "joplin",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_HOST": "db-joplin",
+        "MAX_TIME_DRIFT": "0"
+      },
+      "dependsOn": [
+        "db-joplin"
+      ]
+    },
+    {
+      "name": "db-joplin",
+      "image": "postgres:14.2",
+      "environment": {
+        "POSTGRES_PASSWORD": "${JOPLIN_DB_PASSWORD}",
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_DB": "joplin"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  joplin:
+    container_name: joplin
+    image: florider89/joplin-server:3.0.1
+    restart: unless-stopped
+    depends_on:
+    - db-joplin
+    ports:
+    - ${APP_PORT}:22300
+    dns:
+    - ${DNS_IP}
+    environment:
+    - APP_PORT=22300
+    - APP_BASE_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/
+    - DB_CLIENT=pg
+    - POSTGRES_PASSWORD=${JOPLIN_DB_PASSWORD}
+    - POSTGRES_USER=tipi
+    - POSTGRES_DATABASE=joplin
+    - POSTGRES_PORT=5432
+    - POSTGRES_HOST=db-joplin
+    - MAX_TIME_DRIFT=0
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.joplin-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.joplin.loadbalancer.passhostheader: true
+      traefik.http.services.joplin.loadbalancer.server.port: 22300
+      traefik.http.routers.joplin-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.joplin-insecure.entrypoints: web
+      traefik.http.routers.joplin-insecure.service: joplin
+      traefik.http.routers.joplin-insecure.middlewares: joplin-web-redirect
+      traefik.http.routers.joplin.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.joplin.entrypoints: websecure
+      traefik.http.routers.joplin.service: joplin
+      traefik.http.routers.joplin.tls.certresolver: myresolver
+      traefik.http.routers.joplin-local-insecure.rule: Host(`joplin.${LOCAL_DOMAIN}`)
+      traefik.http.routers.joplin-local-insecure.entrypoints: web
+      traefik.http.routers.joplin-local-insecure.service: joplin
+      traefik.http.routers.joplin-local-insecure.middlewares: joplin-web-redirect
+      traefik.http.routers.joplin-local.rule: Host(`joplin.${LOCAL_DOMAIN}`)
+      traefik.http.routers.joplin-local.entrypoints: websecure
+      traefik.http.routers.joplin-local.service: joplin
+      traefik.http.routers.joplin-local.tls: true
+      runtipi.managed: true
+  db-joplin:
+    container_name: db-joplin
+    image: postgres:14.2
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    environment:
+    - POSTGRES_PASSWORD=${JOPLIN_DB_PASSWORD}
+    - POSTGRES_USER=tipi
+    - POSTGRES_DB=joplin
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
