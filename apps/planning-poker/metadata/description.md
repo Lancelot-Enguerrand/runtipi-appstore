@@ -1,12 +1,70 @@
-This application is intended as a simplified and self-hostable alternative to
-[Planning Poker Online](https://planningpokeronline.com/).
 
-It features:
-
-* Multiple deck types: Fibonacci, modified Fibonacci, T-Shirt sizes, powers of 2 and trust vote (0 to 5)
-* Spectator mode
-* Responsive layout
-* Vote summary
-* Translations _(English, French, German, Italian and Polish. [Contributions welcome!](#im-a-user-and-want-to-contribute-translations))_
-
-It does not have fancy features like issues management, Jira integration or timers.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "planning-poker",
+      "image": "axeleroy/self-host-planning-poker:1.2.1",
+      "isMain": true,
+      "internalPort": 8000,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/data"
+        }
+      ],
+      "healthCheck": {
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s",
+        "test": "wget --no-verbose --tries=1 --spider http://127.0.0.1:8000"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  planning-poker:
+    image: axeleroy/self-host-planning-poker:1.2.1
+    container_name: planning-poker
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8000
+    volumes:
+    - ${APP_DATA_DIR}/data:/data
+    networks:
+    - tipi_main_network
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://127.0.0.1:8000
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.planning-poker-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.planning-poker.loadbalancer.server.port: 8000
+      traefik.http.routers.planning-poker-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.planning-poker-insecure.entrypoints: web
+      traefik.http.routers.planning-poker-insecure.service: planning-poker
+      traefik.http.routers.planning-poker-insecure.middlewares: planning-poker-web-redirect
+      traefik.http.routers.planning-poker.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.planning-poker.entrypoints: websecure
+      traefik.http.routers.planning-poker.service: planning-poker
+      traefik.http.routers.planning-poker.tls.certresolver: myresolver
+      traefik.http.routers.planning-poker-local-insecure.rule: Host(`planning-poker.${LOCAL_DOMAIN}`)
+      traefik.http.routers.planning-poker-local-insecure.entrypoints: web
+      traefik.http.routers.planning-poker-local-insecure.service: planning-poker
+      traefik.http.routers.planning-poker-local-insecure.middlewares: planning-poker-web-redirect
+      traefik.http.routers.planning-poker-local.rule: Host(`planning-poker.${LOCAL_DOMAIN}`)
+      traefik.http.routers.planning-poker-local.entrypoints: websecure
+      traefik.http.routers.planning-poker-local.service: planning-poker
+      traefik.http.routers.planning-poker-local.tls: true
+      runtipi.managed: true
+ 
+```
