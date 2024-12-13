@@ -1,6 +1,57 @@
-## Low-code programming for event-driven applications.
 
-Node-RED is a programming tool for wiring together hardware devices, APIs and online services in new and interesting ways.
-It provides a browser-based editor that makes it easy to wire together flows using the wide range of nodes in the palette that can be deployed to its runtime in a single-click.
-
-![Screenshot](https://camo.githubusercontent.com/c7b6e0b937295c4d2c852130814050eb0caffac5b700ead6de21df6dbf83aa82/687474703a2f2f6e6f64657265642e6f72672f696d616765732f6e6f64652d7265642d73637265656e73686f742e706e67)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "nodered",
+      "image": "nodered/node-red:4.0.5",
+      "isMain": true,
+      "internalPort": 1880,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  nodered:
+    container_name: nodered
+    image: nodered/node-red:4.0.5
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:1880
+    volumes:
+    - ${APP_DATA_DIR}/data:/data
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.nodered-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.nodered.loadbalancer.server.port: 1880
+      traefik.http.routers.nodered-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.nodered-insecure.entrypoints: web
+      traefik.http.routers.nodered-insecure.service: nodered
+      traefik.http.routers.nodered-insecure.middlewares: nodered-web-redirect
+      traefik.http.routers.nodered.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.nodered.entrypoints: websecure
+      traefik.http.routers.nodered.service: nodered
+      traefik.http.routers.nodered.tls.certresolver: myresolver
+      traefik.http.routers.nodered-local-insecure.rule: Host(`nodered.${LOCAL_DOMAIN}`)
+      traefik.http.routers.nodered-local-insecure.entrypoints: web
+      traefik.http.routers.nodered-local-insecure.service: nodered
+      traefik.http.routers.nodered-local-insecure.middlewares: nodered-web-redirect
+      traefik.http.routers.nodered-local.rule: Host(`nodered.${LOCAL_DOMAIN}`)
+      traefik.http.routers.nodered-local.entrypoints: websecure
+      traefik.http.routers.nodered-local.service: nodered
+      traefik.http.routers.nodered-local.tls: true
+      runtipi.managed: true
+ 
+```
