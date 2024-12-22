@@ -1,13 +1,75 @@
-## Stream Movies & TV Shows
 
-Plex Media Server is a digital media player and organizational tool that allows you to access the music, pictures, and videos stored on one computer with any other computer or compatible mobile device. You can install the Plex Media Server software on a Windows, Mac, or Linux computer, or a compatible network-attached storage (NAS) device, then play it back on any other internet-connected device capable of running the Plex app.
-
-Use any compatible device to watch movies, listen to music, and view pictures stored on a computer that runs Plex Media Server. Access media files stored on your Plex Media Server computer remotely over the internet. Allow friends and family to access your movies, music, and pictures over the internet. 
-
-## Folder Info
-
-| Root Folder                           | Container Folder |
-|---------------------------------------|------------------|
-| /runtipi/app-data/plex/data/config    | /config          |
-| /runtipi/app-data/plex/data/transcode | /transcode       |
-| /runtipi/media/data                   | /media           |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "plex",
+      "image": "lscr.io/linuxserver/plex:1.41.3",
+      "isMain": true,
+      "networkMode": "host",
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "VERSION": "docker",
+        "ADVERTISE_IP": "${APP_PROTOCOL:-http}://${APP_DOMAIN}/"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/transcode",
+          "containerPath": "/transcode"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/data",
+          "containerPath": "/media"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:1.41.3
+    container_name: plex
+    network_mode: host
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - VERSION=docker
+    - ADVERTISE_IP=${APP_PROTOCOL:-http}://${APP_DOMAIN}/
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${APP_DATA_DIR}/data/transcode:/transcode
+    - ${ROOT_FOLDER_HOST}/media/data:/media
+    restart: unless-stopped
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.plex-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.plex.loadbalancer.server.port: 32400
+      traefik.http.routers.plex-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.plex-insecure.entrypoints: web
+      traefik.http.routers.plex-insecure.service: plex
+      traefik.http.routers.plex-insecure.middlewares: plex-web-redirect
+      traefik.http.routers.plex.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.plex.entrypoints: websecure
+      traefik.http.routers.plex.service: plex
+      traefik.http.routers.plex.tls.certresolver: myresolver
+      traefik.http.routers.plex-local-insecure.rule: Host(`plex.${LOCAL_DOMAIN}`)
+      traefik.http.routers.plex-local-insecure.entrypoints: web
+      traefik.http.routers.plex-local-insecure.service: plex
+      traefik.http.routers.plex-local-insecure.middlewares: plex-web-redirect
+      traefik.http.routers.plex-local.rule: Host(`plex.${LOCAL_DOMAIN}`)
+      traefik.http.routers.plex-local.entrypoints: websecure
+      traefik.http.routers.plex-local.service: plex
+      traefik.http.routers.plex-local.tls: true
+      runtipi.managed: true
+ 
+```
