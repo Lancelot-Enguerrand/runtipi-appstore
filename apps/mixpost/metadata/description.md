@@ -1,27 +1,171 @@
-## Inital Setup
 
-An admin user will be created automatically. SSH into your Tipi server and run `docker logs mixpost 2>&1 | grep "Your password" ` to find out the password.
-
-You can log in to Mixpost at /mixpost using the admin user account created.
-
-## Inital User
-
-Username: admin@admin.com
-Password: SSH into your Tipi server and run `docker logs mixpost 2>&1 | grep "Your password" ` 
-
-## Introduction
-
-Mixpost it's the coolest Self-hosted social media management software.
-
-This package is the Lite version of Mixpost Pro, and by integrating it into your Laravel project, you can easily create, schedule, publish, and manage social media content in one place, with no limits or monthly subscription fees.
-
-It's the perfect social media management solution for bloggers, crafters and entrepreneurs.
-
-**Mixpost Pro is under development and will be released soon. Sign up to be notified when it's released [mixpost.app](https://mixpost.app/)**
-
-Join our community:
-
--   [Discord](https://discord.gg/5YdseZnK2Z)
--   [Facebook Private Group](https://www.facebook.com/groups/inovector)
-
-[![](https://github.com/inovector/mixpost/raw/main/art/cover.png?v=3)](https://mixpost.app)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "mixpost",
+      "image": "inovector/mixpost:v1.7.2",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "APP_NAME": "'Mixpost'",
+        "APP_KEY": "'${MIXPOST_APP_KEY}'",
+        "APP_URL": "'${APP_PROTOCOL:-http}://${APP_DOMAIN}'",
+        "DB_HOST": "mixpost-mysql",
+        "DB_DATABASE": "mixpost",
+        "DB_USERNAME": "tipi",
+        "DB_PASSWORD": "${MIXPOST_MYSQL_PASSWORD}",
+        "REDIS_HOST": "mixpost-redis",
+        "REDIS_PASSWORD": "${MIXPOST_REDIS_PASSWORD}"
+      },
+      "dependsOn": [
+        "mixpost-mysql",
+        "mixpost-redis"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/mixpost-storage",
+          "containerPath": "/var/www/html/storage/app"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/mixpost-logs",
+          "containerPath": "/var/www/html/storage/logs"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/nginx/nginx.conf",
+          "containerPath": "/etc/nginx/sites-enabled/default"
+        }
+      ]
+    },
+    {
+      "name": "mixpost-mysql",
+      "image": "mysql/mysql-server:8.0",
+      "environment": {
+        "MYSQL_ROOT_PASSWORD": "${MIXPOST_MYSQL_PASSWORD}",
+        "MYSQL_USER": "tipi",
+        "MYSQL_PASSWORD": "${MIXPOST_MYSQL_PASSWORD}",
+        "MYSQL_DATABASE": "mixpost"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/mysql",
+          "containerPath": "/var/lib/mysql"
+        }
+      ],
+      "healthCheck": {
+        "timeout": "5s",
+        "retries": 3,
+        "test": "mysqladmin ping -p ${MIXPOST_MYSQL_PASSWORD}"
+      }
+    },
+    {
+      "name": "mixpost-redis",
+      "image": "redis:latest",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/redis",
+          "containerPath": "/data"
+        }
+      ],
+      "command": "redis-server --appendonly yes --replica-read-only no --requirepass \"${MIXPOST_REDIS_PASSWORD}\"",
+      "healthCheck": {
+        "timeout": "5s",
+        "retries": 3,
+        "test": "redis-cli ping"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  mixpost:
+    image: inovector/mixpost:v1.7.2
+    container_name: mixpost
+    environment:
+    - APP_NAME='Mixpost'
+    - APP_KEY='${MIXPOST_APP_KEY}'
+    - APP_URL='${APP_PROTOCOL:-http}://${APP_DOMAIN}'
+    - DB_HOST=mixpost-mysql
+    - DB_DATABASE=mixpost
+    - DB_USERNAME=tipi
+    - DB_PASSWORD=${MIXPOST_MYSQL_PASSWORD}
+    - REDIS_HOST=mixpost-redis
+    - REDIS_PASSWORD=${MIXPOST_REDIS_PASSWORD}
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/mixpost-storage:/var/www/html/storage/app
+    - ${APP_DATA_DIR}/data/mixpost-logs:/var/www/html/storage/logs
+    - ${APP_DATA_DIR}/data/nginx/nginx.conf:/etc/nginx/sites-enabled/default
+    ports:
+    - ${APP_PORT}:80
+    depends_on:
+    - mixpost-mysql
+    - mixpost-redis
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.mixpost-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.mixpost.loadbalancer.server.port: 80
+      traefik.http.routers.mixpost-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mixpost-insecure.entrypoints: web
+      traefik.http.routers.mixpost-insecure.service: mixpost
+      traefik.http.routers.mixpost-insecure.middlewares: mixpost-web-redirect
+      traefik.http.routers.mixpost.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.mixpost.entrypoints: websecure
+      traefik.http.routers.mixpost.service: mixpost
+      traefik.http.routers.mixpost.tls.certresolver: myresolver
+      traefik.http.routers.mixpost-local-insecure.rule: Host(`mixpost.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mixpost-local-insecure.entrypoints: web
+      traefik.http.routers.mixpost-local-insecure.service: mixpost
+      traefik.http.routers.mixpost-local-insecure.middlewares: mixpost-web-redirect
+      traefik.http.routers.mixpost-local.rule: Host(`mixpost.${LOCAL_DOMAIN}`)
+      traefik.http.routers.mixpost-local.entrypoints: websecure
+      traefik.http.routers.mixpost-local.service: mixpost
+      traefik.http.routers.mixpost-local.tls: true
+      runtipi.managed: true
+  mixpost-mysql:
+    image: mysql/mysql-server:8.0
+    container_name: mixpost_mysql
+    restart: unless-stopped
+    environment:
+    - MYSQL_ROOT_PASSWORD=${MIXPOST_MYSQL_PASSWORD}
+    - MYSQL_USER=tipi
+    - MYSQL_PASSWORD=${MIXPOST_MYSQL_PASSWORD}
+    - MYSQL_DATABASE=mixpost
+    healthcheck:
+      test:
+      - CMD
+      - mysqladmin
+      - ping
+      - -p ${MIXPOST_MYSQL_PASSWORD}
+      retries: 3
+      timeout: 5s
+    volumes:
+    - ${APP_DATA_DIR}/data/mysql:/var/lib/mysql
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  mixpost-redis:
+    image: redis:latest
+    command: redis-server --appendonly yes --replica-read-only no --requirepass "${MIXPOST_REDIS_PASSWORD}"
+    volumes:
+    - ${APP_DATA_DIR}/data/redis:/data
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - ping
+      retries: 3
+      timeout: 5s
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
