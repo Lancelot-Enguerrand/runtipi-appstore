@@ -1,28 +1,84 @@
-# Bitcoin core
 
-Bitcoin Core is free and open-source software that serves as a bitcoin node.
-
-### Warning
-The current size of the bitcoin blockchain is [more than 500 GB.](https://ycharts.com/indicators/bitcoin_blockchain_size)
-
-
-## What Is A Full Node?
-
-A full node is a program that fully validates transactions and blocks. Almost all full nodes also help the network by accepting transactions and blocks from other full nodes, validating those transactions and blocks, and then relaying them to further full nodes.
-
-Most full nodes also serve lightweight clients by allowing them to transmit their transactions to the network and by notifying them when a transaction affects their wallet. If not enough nodes perform this function, clients won’t be able to connect through the peer-to-peer network—they’ll have to use centralized services instead.
-
-Many people and organizations volunteer to run full nodes using spare computing and bandwidth resources—but more volunteers are needed to allow Bitcoin to continue to grow. This document describes how you can help and what helping will cost you.
-
-## Minimum Requirements
-Bitcoin Core full nodes have certain requirements. If you try running a node on weak hardware, it may work—but you’ll likely spend more time dealing with issues. If you can meet the following requirements, you’ll have an easy-to-use node.
-
-- Desktop or laptop hardware running recent versions of Windows, Mac OS X, or Linux.
-
-- 7 gigabytes of free disk space, accessible at a minimum read/write speed of 100 MB/s.
-
-- 2 gigabytes of memory (RAM)
-
-- A broadband Internet connection with upload speeds of at least 400 kilobits (50 kilobytes) per second
-
-- An unmetered connection, a connection with high upload limits, or a connection you regularly monitor to ensure it doesn’t exceed its upload limits. It’s common for full nodes on high-speed connections to use 200 gigabytes upload or more a month. Download usage is around 20 gigabytes a month, plus around an additional 500 gigabytes the first time you start your node.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "bitcoind",
+      "image": "lncm/bitcoind:v27.0",
+      "isMain": true,
+      "internalPort": 8333,
+      "addPorts": [
+        {
+          "hostPort": 8332,
+          "containerPort": 8332
+        },
+        {
+          "hostPort": 28332,
+          "containerPort": 28332
+        },
+        {
+          "hostPort": 28333,
+          "containerPort": 28333
+        }
+      ],
+      "user": "0:0",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/root/.bitcoin"
+        }
+      ],
+      "command": "-dbcache=${BITCOIND_DB_CACHE:-450} -maxmempool=${BITCOIND_MAX_MEMPOOL:-300} -listen=${BITCOIND_LISTEN:-1} -server=${BITCOIND_SERVER:-1} -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0 -prune=${BITCOIND_PRUNING:-0} -maxconnections=${BITCOIND_MAXPEERS:-125} -txindex=${BITCOIND_TXINDEX:-1} -peerbloomfilters=${BITCOIND_BLOOM_FILTERS:-1} -blockfilterindex=${BITCOIND_BLOCK_FILTER:-1} -peerblockfilters=${BITCOIND_BLOCK_FILTER:-1}",
+      "stop_grace_period": "15m30s"
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  bitcoind:
+    container_name: bitcoind
+    image: lncm/bitcoind:v27.0
+    user: 0:0
+    volumes:
+    - ${APP_DATA_DIR}/data:/root/.bitcoin
+    ports:
+    - ${APP_PORT}:8333
+    - 8332:8332
+    - 28332:28332
+    - 28333:28333
+    restart: unless-stopped
+    stop_grace_period: 15m30s
+    command: -dbcache=${BITCOIND_DB_CACHE:-450} -maxmempool=${BITCOIND_MAX_MEMPOOL:-300}
+      -listen=${BITCOIND_LISTEN:-1} -server=${BITCOIND_SERVER:-1} -rpcallowip=0.0.0.0/0
+      -rpcbind=0.0.0.0 -prune=${BITCOIND_PRUNING:-0} -maxconnections=${BITCOIND_MAXPEERS:-125}
+      -txindex=${BITCOIND_TXINDEX:-1} -peerbloomfilters=${BITCOIND_BLOOM_FILTERS:-1}
+      -blockfilterindex=${BITCOIND_BLOCK_FILTER:-1} -peerblockfilters=${BITCOIND_BLOCK_FILTER:-1}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.bitcoind-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.bitcoind.loadbalancer.server.port: 3333
+      traefik.http.routers.bitcoind-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.bitcoind-insecure.entrypoints: web
+      traefik.http.routers.bitcoind-insecure.service: bitcoind
+      traefik.http.routers.bitcoind-insecure.middlewares: bitcoind-web-redirect
+      traefik.http.routers.bitcoind.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.bitcoind.entrypoints: websecure
+      traefik.http.routers.bitcoind.service: bitcoind
+      traefik.http.routers.bitcoind.tls.certresolver: myresolver
+      traefik.http.routers.bitcoind-local-insecure.rule: Host(`bitcoind.${LOCAL_DOMAIN}`)
+      traefik.http.routers.bitcoind-local-insecure.entrypoints: web
+      traefik.http.routers.bitcoind-local-insecure.service: bitcoind
+      traefik.http.routers.bitcoind-local-insecure.middlewares: bitcoind-web-redirect
+      traefik.http.routers.bitcoind-local.rule: Host(`bitcoind.${LOCAL_DOMAIN}`)
+      traefik.http.routers.bitcoind-local.entrypoints: websecure
+      traefik.http.routers.bitcoind-local.service: bitcoind
+      traefik.http.routers.bitcoind-local.tls: true
+      runtipi.managed: true
+ 
+```
