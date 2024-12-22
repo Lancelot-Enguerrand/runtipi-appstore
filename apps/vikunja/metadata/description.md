@@ -1,11 +1,122 @@
-## The Todo-app to organize your life.
 
-- Create TODO lists with tasks
-- Reminder for tasks
-- Namespaces: A "group" which bundles multiple lists
-- Share lists and namespaces with teams and users with granular permissions
-- Plenty of details for tasks
-
-See the [features page](https://vikunja.cloud/features) on our website for a more exaustive list or try it on [try.vikunja.io](https://try.vikunja.io)!
-
-![](https://vikunja.io/images/vikunja/09-task-detail-dark.png)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "vikunja",
+      "image": "vikunja/vikunja:0.24.6",
+      "isMain": true,
+      "internalPort": 3456,
+      "environment": {
+        "VIKUNJA_DATABASE_HOST": "vikunja-db",
+        "VIKUNJA_DATABASE_PASSWORD": "${VIKUNJA_DB_PASSWORD}",
+        "VIKUNJA_DATABASE_TYPE": "postgres",
+        "VIKUNJA_DATABASE_USER": "tipi",
+        "VIKUNJA_DATABASE_DATABASE": "vikunja",
+        "VIKUNJA_SERVICE_JWTSECRET": "${VIKUNJA_SERVICE_SECRET}",
+        "VIKUNJA_SERVICE_PUBLICURL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}/"
+      },
+      "dependsOn": {
+        "vikunja-db": {
+          "condition": "service_healthy"
+        }
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/files",
+          "containerPath": "/app/vikunja/files"
+        }
+      ]
+    },
+    {
+      "name": "vikunja-db",
+      "image": "postgres:14",
+      "environment": {
+        "POSTGRES_PASSWORD": "${VIKUNJA_DB_PASSWORD}",
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_DB": "vikunja"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "healthCheck": {
+        "interval": "5s",
+        "timeout": "5s",
+        "retries": 5,
+        "test": "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  vikunja:
+    container_name: vikunja
+    image: vikunja/vikunja:0.24.6
+    environment:
+      VIKUNJA_DATABASE_HOST: vikunja-db
+      VIKUNJA_DATABASE_PASSWORD: ${VIKUNJA_DB_PASSWORD}
+      VIKUNJA_DATABASE_TYPE: postgres
+      VIKUNJA_DATABASE_USER: tipi
+      VIKUNJA_DATABASE_DATABASE: vikunja
+      VIKUNJA_SERVICE_JWTSECRET: ${VIKUNJA_SERVICE_SECRET}
+      VIKUNJA_SERVICE_PUBLICURL: ${APP_PROTOCOL:-http}://${APP_DOMAIN}/
+    volumes:
+    - ${APP_DATA_DIR}/data/files:/app/vikunja/files
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:3456
+    depends_on:
+      vikunja-db:
+        condition: service_healthy
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.vikunja-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.vikunja.loadbalancer.server.port: 3456
+      traefik.http.routers.vikunja-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.vikunja-insecure.entrypoints: web
+      traefik.http.routers.vikunja-insecure.service: vikunja
+      traefik.http.routers.vikunja-insecure.middlewares: vikunja-web-redirect
+      traefik.http.routers.vikunja.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.vikunja.entrypoints: websecure
+      traefik.http.routers.vikunja.service: vikunja
+      traefik.http.routers.vikunja.tls.certresolver: myresolver
+      traefik.http.routers.vikunja-local-insecure.rule: Host(`vikunja.${LOCAL_DOMAIN}`)
+      traefik.http.routers.vikunja-local-insecure.entrypoints: web
+      traefik.http.routers.vikunja-local-insecure.service: vikunja
+      traefik.http.routers.vikunja-local-insecure.middlewares: vikunja-web-redirect
+      traefik.http.routers.vikunja-local.rule: Host(`vikunja.${LOCAL_DOMAIN}`)
+      traefik.http.routers.vikunja-local.entrypoints: websecure
+      traefik.http.routers.vikunja-local.service: vikunja
+      traefik.http.routers.vikunja-local.tls: true
+      runtipi.managed: true
+  vikunja-db:
+    container_name: vikunja-db
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: ${VIKUNJA_DB_PASSWORD}
+      POSTGRES_USER: tipi
+      POSTGRES_DB: vikunja
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
