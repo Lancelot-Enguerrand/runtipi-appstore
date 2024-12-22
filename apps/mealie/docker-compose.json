@@ -1,0 +1,20 @@
+{
+  "services": [
+    {
+      "name": "mealie",
+      "image": "hkotel/mealie:v0.5.6",
+      "isMain": true,
+      "internalPort": 80,
+      "environment": {
+        "PUID": 1000,
+        "PGID": 1000
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/app/data"
+        }
+      ]
+    }
+  ]
+}
