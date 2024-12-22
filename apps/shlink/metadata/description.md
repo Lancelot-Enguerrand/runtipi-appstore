@@ -1,25 +1,101 @@
-# Shlink
 
-Shlink is a fast self-hosted URL shortener that offers a RESTful API and a command line interface. Your shortened links are also safely manageable through [app.shlink.io](https://app.shlink.io) which is 100% browser based. Notable features include custom slugs, click tracking, and tag management. 
-
-Please note that the following advanced features are not activated through this Tipi App:
-* Multi-domain support
-* Geo-Localisation
-* RabbitMQ/Mercure real-time updates
-
-During the installation process, you will be prompted to specify the domain for your shortened URLs.
-
-## ℹ️ Required post installation step
-After installing Shlink in Tipi, you will have to generate a API Key before being able to use the service through the following command. 
-```bash
-docker exec -it shlink shlink api-key:generate
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "shlink",
+      "image": "ghcr.io/shlinkio/shlink:4.3.1",
+      "isMain": true,
+      "internalPort": 8080,
+      "environment": {
+        "DEFAULT_DOMAIN": "${APP_DOMAIN}",
+        "IS_HTTPS_ENABLED": "true",
+        "DB_DRIVER": "postgres",
+        "DB_HOST": "shlink-db",
+        "DB_NAME": "shlink",
+        "DB_USER": "shlink",
+        "DB_PASSWORD": "${SHLINK_POSTGRES_PASSWORD}"
+      },
+      "dependsOn": [
+        "shlink-db"
+      ]
+    },
+    {
+      "name": "shlink-db",
+      "image": "docker.io/library/postgres:17.2-alpine",
+      "environment": {
+        "POSTGRES_PASSWORD": "${SHLINK_POSTGRES_PASSWORD}",
+        "POSTGRES_USER": "shlink",
+        "POSTGRES_DB": "shlink"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ]
+    }
+  ]
+} 
 ```
-
-Keep your API Key secure, as it is essential for link administration. If you lose the key, rerun the command to generate a new one.
-
-If you don't have access to the console of your Tipi server, consider using Portainer which is available on Tipi. Within Portainer, you would have to:
-* Select the local environment
-* Select the shlink container - not the shlink-db -
-* Click on Console within the "Container Status" panel
-* Execute a /bin/sh command
-* Within the newly opened terminal, enter `shlink api-key:generate`
+# YAML
+```yaml
+version: '3.9'
+services:
+  shlink:
+    container_name: shlink
+    image: ghcr.io/shlinkio/shlink:4.3.1
+    environment:
+    - DEFAULT_DOMAIN=${APP_DOMAIN}
+    - IS_HTTPS_ENABLED=true
+    - DB_DRIVER=postgres
+    - DB_HOST=shlink-db
+    - DB_NAME=shlink
+    - DB_USER=shlink
+    - DB_PASSWORD=${SHLINK_POSTGRES_PASSWORD}
+    ports:
+    - ${APP_PORT}:8080
+    restart: unless-stopped
+    depends_on:
+    - shlink-db
+    volumes: []
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.shlink-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.shlink.loadbalancer.server.port: 8080
+      traefik.http.routers.shlink-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.shlink-insecure.entrypoints: web
+      traefik.http.routers.shlink-insecure.service: shlink
+      traefik.http.routers.shlink-insecure.middlewares: shlink-web-redirect
+      traefik.http.routers.shlink.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.shlink.entrypoints: websecure
+      traefik.http.routers.shlink.service: shlink
+      traefik.http.routers.shlink.tls.certresolver: myresolver
+      traefik.http.routers.shlink-local-insecure.rule: Host(`shlink.${LOCAL_DOMAIN}`)
+      traefik.http.routers.shlink-local-insecure.entrypoints: web
+      traefik.http.routers.shlink-local-insecure.service: shlink
+      traefik.http.routers.shlink-local-insecure.middlewares: shlink-web-redirect
+      traefik.http.routers.shlink-local.rule: Host(`shlink.${LOCAL_DOMAIN}`)
+      traefik.http.routers.shlink-local.entrypoints: websecure
+      traefik.http.routers.shlink-local.service: shlink
+      traefik.http.routers.shlink-local.tls: true
+      runtipi.managed: true
+  shlink-db:
+    container_name: shlink-db
+    image: docker.io/library/postgres:17.2-alpine
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_PASSWORD=${SHLINK_POSTGRES_PASSWORD}
+    - POSTGRES_USER=shlink
+    - POSTGRES_DB=shlink
+    labels:
+      runtipi.managed: true
+ 
+```
