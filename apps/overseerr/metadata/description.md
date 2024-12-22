@@ -1,14 +1,73 @@
-**Overseerr** is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as **[Sonarr](https://sonarr.tv/)**, **[Radarr](https://radarr.video/)**, and **[Plex](https://www.plex.tv/)**!
 
-## Current Features
-
-- Full Plex integration. Authenticate and manage user access with Plex!
-- Easy integration with your existing services. Currently, Overseerr supports Sonarr and Radarr. More to come!
-- Plex library scan, to keep track of the titles which are already available.
-- Customizable request system, which allows users to request individual seasons or movies in a friendly, easy-to-use interface.
-- Incredibly simple request management UI. Don't dig through the app to simply approve recent requests!
-- Granular permission system.
-- Support for various notification agents.
-- Mobile-friendly design, for when you need to approve requests on the go!
-
-With more features on the way! Check out our [issue tracker](https://github.com/sct/overseerr/issues) to see the features which have already been requested.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "overseerr",
+      "image": "ghcr.io/linuxserver/overseerr:1.33.2",
+      "isMain": true,
+      "internalPort": 5055,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  overseerr:
+    container_name: overseerr
+    image: ghcr.io/linuxserver/overseerr:1.33.2
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data/config:/config
+    ports:
+    - ${APP_PORT}:5055
+    restart: unless-stopped
+    dns:
+    - ${DNS_IP}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.overseerr-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.overseerr.loadbalancer.server.port: 5055
+      traefik.http.routers.overseerr-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.overseerr-insecure.entrypoints: web
+      traefik.http.routers.overseerr-insecure.service: overseerr
+      traefik.http.routers.overseerr-insecure.middlewares: overseerr-web-redirect
+      traefik.http.routers.overseerr.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.overseerr.entrypoints: websecure
+      traefik.http.routers.overseerr.service: overseerr
+      traefik.http.routers.overseerr.tls.certresolver: myresolver
+      traefik.http.routers.overseerr-local-insecure.rule: Host(`overseerr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.overseerr-local-insecure.entrypoints: web
+      traefik.http.routers.overseerr-local-insecure.service: overseerr
+      traefik.http.routers.overseerr-local-insecure.middlewares: overseerr-web-redirect
+      traefik.http.routers.overseerr-local.rule: Host(`overseerr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.overseerr-local.entrypoints: websecure
+      traefik.http.routers.overseerr-local.service: overseerr
+      traefik.http.routers.overseerr-local.tls: true
+      runtipi.managed: true
+ 
+```
