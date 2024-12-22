@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "name": "homeassistant",
+      "image": "ghcr.io/home-assistant/home-assistant:stable",
+      "isMain": true,
+      "networkMode": "host",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/config",
+          "containerPath": "/config"
+        }
+      ],
+      "privileged": true
+    }
+  ]
+}
