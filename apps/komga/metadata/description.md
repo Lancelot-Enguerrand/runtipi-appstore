@@ -1,32 +1,67 @@
-## Komga
 
-Komga is a media server for your comics, mangas, BDs, magazines and eBooks.
-
-### Chat on [Discord](https://discord.gg/TdRpkDu)
-
-### Features
-
-- Browse libraries, series and books via a responsive web UI that works on desktop, tablets and phones
-- Organize your library with collections and read lists
-- Edit metadata for your series and books
-- Import embedded metadata automatically
-- Webreader with multiple reading modes
-- Manage multiple users, with per-library access control, age restrictions, and labels restrictions
-- Offers a REST API, many community tools and scripts can interact with Komga
-- Download book files, whole series, or read lists
-- Duplicate files detection
-- Duplicate pages detection and removal
-- Import books from outside your libraries directly into your series folder
-- Import ComicRack `cbl` read lists
-
-### Documentation
-
-Head over to our [website](https://komga.org) for more information.
-
-### Develop in Komga
-
-Check the [development guidelines](./DEVELOPING.md).
-
-### Credits
-
-The Komga icon is based on an icon made by [Freepik](https://www.freepik.com/home) from [Flaticon](https://www.flaticon.com).
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "komga",
+      "image": "ghcr.io/gotson/komga:1.15.1",
+      "isMain": true,
+      "internalPort": 25600,
+      "environment": {
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/data",
+          "containerPath": "/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  komga:
+    image: ghcr.io/gotson/komga:1.15.1
+    container_name: komga
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    - ${APP_DATA_DIR}/data/data:/data
+    environment:
+    - TZ=${TZ}
+    ports:
+    - ${APP_PORT}:25600
+    networks:
+    - tipi_main_network
+    restart: unless-stopped
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.komga-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.komga.loadbalancer.server.port: 25600
+      traefik.http.routers.komga-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.komga-insecure.entrypoints: web
+      traefik.http.routers.komga-insecure.service: komga
+      traefik.http.routers.komga-insecure.middlewares: komga-web-redirect
+      traefik.http.routers.komga.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.komga.entrypoints: websecure
+      traefik.http.routers.komga.service: komga
+      traefik.http.routers.komga.tls.certresolver: myresolver
+      traefik.http.routers.komga-local-insecure.rule: Host(`komga.${LOCAL_DOMAIN}`)
+      traefik.http.routers.komga-local-insecure.entrypoints: web
+      traefik.http.routers.komga-local-insecure.service: komga
+      traefik.http.routers.komga-local-insecure.middlewares: komga-web-redirect
+      traefik.http.routers.komga-local.rule: Host(`komga.${LOCAL_DOMAIN}`)
+      traefik.http.routers.komga-local.entrypoints: websecure
+      traefik.http.routers.komga-local.service: komga
+      traefik.http.routers.komga-local.tls: true
+      runtipi.managed: true
+ 
+```
