@@ -1,9 +1,139 @@
-# Open source website building tool
 
-[Halo](https://github.com/halo-dev/halo) is a powerful and easy-to-use open source website building tool, with rich themes and plugins to help you build the ideal site in your mind.
-
-## Links
-
-- Repository: <https://github.com/halo-dev/halo>
-- Awesome Halo: <https://github.com/halo-sigs/awesome-halo>
-- Homepage: <https://halo.run>
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "halo",
+      "image": "halohub/halo:2.20.12",
+      "isMain": true,
+      "internalPort": 8090,
+      "dependsOn": {
+        "halodb": {
+          "condition": "service_healthy"
+        }
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}",
+          "containerPath": "/root/.halo2"
+        }
+      ],
+      "command": [
+        "--spring.r2dbc.url=r2dbc:pool:postgresql://halodb/halo",
+        "--spring.r2dbc.username=halo",
+        "--spring.r2dbc.password=${HALO_DATABASE_PASSWORD}",
+        "--spring.sql.init.platform=postgresql",
+        "--halo.external-url=${HALO_EXTERNAL_URL}"
+      ],
+      "healthCheck": {
+        "interval": "30s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s",
+        "test": "curl -f http://localhost:8090/actuator/health/readiness"
+      }
+    },
+    {
+      "name": "halodb",
+      "image": "postgres:latest",
+      "environment": {
+        "POSTGRES_PASSWORD": "${HALO_DATABASE_PASSWORD}",
+        "POSTGRES_USER": "halo",
+        "POSTGRES_DB": "halo",
+        "PGUSER": "halo"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/db",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "healthCheck": {
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "test": "pg_isready"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  halo:
+    image: halohub/halo:2.20.12
+    container_name: halo
+    restart: unless-stopped
+    depends_on:
+      halodb:
+        condition: service_healthy
+    networks:
+    - tipi_main_network
+    volumes:
+    - ${APP_DATA_DIR}:/root/.halo2
+    ports:
+    - ${APP_PORT}:8090
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8090/actuator/health/readiness
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command:
+    - --spring.r2dbc.url=r2dbc:pool:postgresql://halodb/halo
+    - --spring.r2dbc.username=halo
+    - --spring.r2dbc.password=${HALO_DATABASE_PASSWORD}
+    - --spring.sql.init.platform=postgresql
+    - --halo.external-url=${HALO_EXTERNAL_URL}
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.halo-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.halo.loadbalancer.server.port: 8090
+      traefik.http.routers.halo-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.halo-insecure.entrypoints: web
+      traefik.http.routers.halo-insecure.service: halo
+      traefik.http.routers.halo-insecure.middlewares: halo-web-redirect
+      traefik.http.routers.halo.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.halo.entrypoints: websecure
+      traefik.http.routers.halo.service: halo
+      traefik.http.routers.halo.tls.certresolver: myresolver
+      traefik.http.routers.halo-local-insecure.rule: Host(`halo.${LOCAL_DOMAIN}`)
+      traefik.http.routers.halo-local-insecure.entrypoints: web
+      traefik.http.routers.halo-local-insecure.service: halo
+      traefik.http.routers.halo-local-insecure.middlewares: halo-web-redirect
+      traefik.http.routers.halo-local.rule: Host(`halo.${LOCAL_DOMAIN}`)
+      traefik.http.routers.halo-local.entrypoints: websecure
+      traefik.http.routers.halo-local.service: halo
+      traefik.http.routers.halo-local.tls: true
+      runtipi.managed: true
+  halodb:
+    image: postgres:latest
+    container_name: halodb
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    volumes:
+    - ${APP_DATA_DIR}/db:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD
+      - pg_isready
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+    - POSTGRES_PASSWORD=${HALO_DATABASE_PASSWORD}
+    - POSTGRES_USER=halo
+    - POSTGRES_DB=halo
+    - PGUSER=halo
+    labels:
+      runtipi.managed: true
+ 
+```
