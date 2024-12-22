@@ -3,11 +3,12 @@
   "name": "Bitcoin",
   "available": true,
   "exposable": false,
+  "dynamic_config": true,
   "no_gui": true,
   "port": 8333,
   "id": "bitcoind",
   "description": "Bitcoin core node",
-  "tipi_version": 5,
+  "tipi_version": 6,
   "version": "27.0",
   "categories": ["finance"],
   "short_desc": "Bitcoin core node",
@@ -130,5 +131,5 @@
   ],
   "supported_architectures": ["amd64", "arm64"],
   "created_at": 1691943801422,
-  "updated_at": 1723566283000
+  "updated_at": 1734908144599
 }
