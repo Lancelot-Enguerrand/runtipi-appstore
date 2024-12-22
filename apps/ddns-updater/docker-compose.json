@@ -1,0 +1,16 @@
+{
+  "services": [
+    {
+      "name": "ddns-updater",
+      "image": "qmcgaw/ddns-updater:v2.8.2",
+      "isMain": true,
+      "internalPort": 8000,
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/config",
+          "containerPath": "/updater/data"
+        }
+      ]
+    }
+  ]
+}
