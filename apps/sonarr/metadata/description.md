@@ -1,24 +1,79 @@
-## Smart PVR for newsgroup and bittorrent users. 
 
-Sonarr is a PVR for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.
-
-### Current Features
-
-- Support for major platforms: Windows, Linux, macOS, Raspberry Pi, etc.
-- Automatically detects new episodes
-- Can scan your existing library and download any missing episodes
-- Can watch for better quality of the episodes you already have and do an automatic upgrade. *eg. from DVD to Blu-Ray*
-- Automatic failed download handling will try another release if one fails
-- Manual search so you can pick any release or to see why a release was not downloaded automatically
-- Fully configurable episode renaming
-- Full integration with SABnzbd and NZBGet
-- Full integration with Kodi, Plex (notification, library update, metadata)
-- Full support for specials and multi-episode releases
-- And a beautiful UI
-
-## Folder Info
-
-| Root Folder                   | Container Folder |
-|-------------------------------|------------------|
-| /runtipi/app-data/sonarr/data | /config          |
-| /runtipi/media                | /downloads       |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "sonarr",
+      "image": "lscr.io/linuxserver/sonarr:4.0.11",
+      "isMain": true,
+      "internalPort": 8989,
+      "environment": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media",
+          "containerPath": "/media"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.11
+    container_name: sonarr
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TZ}
+    dns:
+    - ${DNS_IP}
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ${APP_DATA_DIR}/data:/config
+    - ${ROOT_FOLDER_HOST}/media:/media
+    ports:
+    - ${APP_PORT}:8989
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.sonarr-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.sonarr.loadbalancer.server.port: 8989
+      traefik.http.routers.sonarr-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.sonarr-insecure.entrypoints: web
+      traefik.http.routers.sonarr-insecure.service: sonarr
+      traefik.http.routers.sonarr-insecure.middlewares: sonarr-web-redirect
+      traefik.http.routers.sonarr.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.sonarr.entrypoints: websecure
+      traefik.http.routers.sonarr.service: sonarr
+      traefik.http.routers.sonarr.tls.certresolver: myresolver
+      traefik.http.routers.sonarr-local-insecure.rule: Host(`sonarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.sonarr-local-insecure.entrypoints: web
+      traefik.http.routers.sonarr-local-insecure.service: sonarr
+      traefik.http.routers.sonarr-local-insecure.middlewares: sonarr-web-redirect
+      traefik.http.routers.sonarr-local.rule: Host(`sonarr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.sonarr-local.entrypoints: websecure
+      traefik.http.routers.sonarr-local.service: sonarr
+      traefik.http.routers.sonarr-local.tls: true
+      runtipi.managed: true
+ 
+```
