@@ -43,6 +43,7 @@
       "label": "Binding Port",
       "hint": "Port used to run application in container",
       "placeholder": "8080",
+      "required": true,
       "env_variable": "SFTPGO_BINDING_PORT"
     },
     {
