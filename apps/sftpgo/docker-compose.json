@@ -4,7 +4,7 @@
       "name": "sftpgo",
       "image": "drakkan/sftpgo:v2.6.4-alpine",
       "isMain": true,
-      "internalPort": "${SFTPGO_BINDING_PORT}",
+      "internalPort": ${SFTPGO_BINDING_PORT-8080},
       "addPorts": [
         {
           "hostPort": 2022,
