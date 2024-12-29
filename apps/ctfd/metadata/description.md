@@ -1,35 +1,152 @@
-# ![](https://github.com/CTFd/CTFd/blob/master/CTFd/themes/core/static/img/logo.png?raw=true)
 
-## What is CTFd?
-
-CTFd is a Capture The Flag framework focusing on ease of use and customizability. It comes with everything you need to run a CTF and it's easy to customize with plugins and themes.
-
-![CTFd is a CTF in a can.](https://github.com/CTFd/CTFd/blob/master/CTFd/themes/core/static/img/scoreboard.png?raw=true)
-
-## Features
-
-- Create your own challenges, categories, hints, and flags from the Admin Interface
-  - Dynamic Scoring Challenges
-  - Unlockable challenge support
-  - Challenge plugin architecture to create your own custom challenges
-  - Static & Regex based flags
-    - Custom flag plugins
-  - Unlockable hints
-  - File uploads to the server or an Amazon S3-compatible backend
-  - Limit challenge attempts & hide challenges
-  - Automatic bruteforce protection
-- Individual and Team based competitions
-  - Have users play on their own or form teams to play together
-- Scoreboard with automatic tie resolution
-  - Hide Scores from the public
-  - Freeze Scores at a specific time
-- Scoregraphs comparing the top 10 teams and team progress graphs
-- Markdown content management system
-- SMTP + Mailgun email support
-  - Email confirmation support
-  - Forgot password support
-- Automatic competition starting and ending
-- Team management, hiding, and banning
-- Customize everything using the [plugin](https://docs.ctfd.io/docs/plugins/overview) and [theme](https://docs.ctfd.io/docs/themes/overview) interfaces
-- Importing and Exporting of CTF data for archival
-- And a lot more...
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "ctfd",
+      "image": "ctfd/ctfd:3.7.5",
+      "isMain": true,
+      "internalPort": 8000,
+      "environment": {
+        "UPLOAD_FOLDER": "/var/uploads",
+        "DATABASE_URL": "mysql+pymysql://tipi:${CTFD_MYSQL_DB_PASSWORD}@ctfd-db/ctfd",
+        "REDIS_URL": "redis://ctfd-redis:6379",
+        "WORKERS": "1",
+        "LOG_FOLDER": "/var/log/CTFd",
+        "ACCESS_LOG": "-",
+        "ERROR_LOG": "-",
+        "REVERSE_PROXY": "true",
+        "SECRET_KEY": "${CTFD_SECRET_KEY}"
+      },
+      "dependsOn": [
+        "ctfd-db"
+      ],
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/uploads",
+          "containerPath": "/var/log/CTFd"
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data/uploads",
+          "containerPath": "/var/uploads"
+        }
+      ]
+    },
+    {
+      "name": "ctfd-db",
+      "image": "mariadb:10.4.12",
+      "environment": {
+        "MYSQL_ROOT_PASSWORD": "${CTFD_MYSQL_ROOT_PASSWORD}",
+        "MYSQL_USER": "tipi",
+        "MYSQL_PASSWORD": "${CTFD_MYSQL_DB_PASSWORD}",
+        "MYSQL_DATABASE": "ctfd"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/db",
+          "containerPath": "/var/lib/mysql"
+        }
+      ],
+      "command": [
+        "mysqld",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--wait_timeout=28800",
+        "--log-warnings=0"
+      ]
+    },
+    {
+      "name": "ctfd-redis",
+      "image": "redis:4",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/redis",
+          "containerPath": "/data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  ctfd:
+    image: ctfd/ctfd:3.7.5
+    container_name: ctfd
+    restart: unless-stopped
+    ports:
+    - ${APP_PORT}:8000
+    environment:
+    - UPLOAD_FOLDER=/var/uploads
+    - DATABASE_URL=mysql+pymysql://tipi:${CTFD_MYSQL_DB_PASSWORD}@ctfd-db/ctfd
+    - REDIS_URL=redis://ctfd-redis:6379
+    - WORKERS=1
+    - LOG_FOLDER=/var/log/CTFd
+    - ACCESS_LOG=-
+    - ERROR_LOG=-
+    - REVERSE_PROXY=true
+    - SECRET_KEY=${CTFD_SECRET_KEY}
+    volumes:
+    - ${APP_DATA_DIR}/data/uploads:/var/log/CTFd
+    - ${APP_DATA_DIR}/data/uploads:/var/uploads
+    depends_on:
+    - ctfd-db
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.ctfd-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.ctfd.loadbalancer.server.port: 8000
+      traefik.http.routers.ctfd-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.ctfd-insecure.entrypoints: web
+      traefik.http.routers.ctfd-insecure.service: ctfd
+      traefik.http.routers.ctfd-insecure.middlewares: ctfd-web-redirect
+      traefik.http.routers.ctfd.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.ctfd.entrypoints: websecure
+      traefik.http.routers.ctfd.service: ctfd
+      traefik.http.routers.ctfd.tls.certresolver: myresolver
+      traefik.http.routers.ctfd-local-insecure.rule: Host(`ctfd.${LOCAL_DOMAIN}`)
+      traefik.http.routers.ctfd-local-insecure.entrypoints: web
+      traefik.http.routers.ctfd-local-insecure.service: ctfd
+      traefik.http.routers.ctfd-local-insecure.middlewares: ctfd-web-redirect
+      traefik.http.routers.ctfd-local.rule: Host(`ctfd.${LOCAL_DOMAIN}`)
+      traefik.http.routers.ctfd-local.entrypoints: websecure
+      traefik.http.routers.ctfd-local.service: ctfd
+      traefik.http.routers.ctfd-local.tls: true
+      runtipi.managed: true
+  ctfd-db:
+    image: mariadb:10.4.12
+    restart: unless-stopped
+    container_name: ctfd-db
+    environment:
+    - MYSQL_ROOT_PASSWORD=${CTFD_MYSQL_ROOT_PASSWORD}
+    - MYSQL_USER=tipi
+    - MYSQL_PASSWORD=${CTFD_MYSQL_DB_PASSWORD}
+    - MYSQL_DATABASE=ctfd
+    volumes:
+    - ${APP_DATA_DIR}/data/db:/var/lib/mysql
+    networks:
+    - tipi_main_network
+    command:
+    - mysqld
+    - --character-set-server=utf8mb4
+    - --collation-server=utf8mb4_unicode_ci
+    - --wait_timeout=28800
+    - --log-warnings=0
+    labels:
+      runtipi.managed: true
+  ctfd-redis:
+    image: redis:4
+    container_name: ctfd-redis
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/redis:/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
