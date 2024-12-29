@@ -16,8 +16,12 @@
           "containerPath": "/config"
         },
         {
-          "hostPath": "${ROOT_FOLDER_HOST}/media/data/books",
+          "hostPath": "${APP_DATA_DIR}/data/config",
           "containerPath": "/books"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media/data/books",
+          "containerPath": "/media/books"
         }
       ]
     }
