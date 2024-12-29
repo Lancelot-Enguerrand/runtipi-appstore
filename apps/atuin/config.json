@@ -3,9 +3,10 @@
   "name": "Atuin Server",
   "available": true,
   "exposable": true,
+  "dynamic_config": true,
   "port": 8888,
   "id": "atuin",
-  "tipi_version": 8,
+  "tipi_version": 9,
   "version": "18.4.0",
   "categories": ["utilities", "development"],
   "description": "Atuin replaces your existing shell history with a SQLite database, and records additional context for your commands.",
@@ -31,5 +32,5 @@
   ],
   "supported_architectures": ["amd64", "arm64"],
   "created_at": 1691943801422,
-  "updated_at": 1735321991000
+  "updated_at": 1735481861452
 }
