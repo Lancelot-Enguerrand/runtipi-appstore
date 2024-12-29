@@ -1,3 +1,179 @@
-A self-hosted BitTorrent indexer, DHT crawler, content classifier and torrent search engine with web UI, GraphQL API and Servarr stack integration.
 
-Visit the website at bitmagnet.io.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "bitmagnet",
+      "image": "ghcr.io/bitmagnet-io/bitmagnet:v0.9.5",
+      "isMain": true,
+      "internalPort": 3333,
+      "addPorts": [
+        {
+          "hostPort": 3334,
+          "containerPort": 3334,
+          "tcp": true,
+          "udp": true
+        }
+      ],
+      "environment": {
+        "POSTGRES_HOST": "bitmagnet-db",
+        "POSTGRES_NAME": "bitmagnet",
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_PASSWORD": "${BITMAGNENT_DB_PASSWORD}",
+        "REDIS_ADDR": "bitmagnet-redis:6379"
+      },
+      "dependsOn": {
+        "bitmagnet-db": {
+          "condition": "service_healthy"
+        },
+        "bitmagnet-redis": {
+          "condition": "service_started"
+        }
+      },
+      "command": [
+        "worker",
+        "run",
+        "--keys=http_server",
+        "--keys=queue_server",
+        "--keys=dht_crawler"
+      ]
+    },
+    {
+      "name": "bitmagnet-db",
+      "image": "docker.io/library/postgres:17-alpine",
+      "environment": {
+        "POSTGRES_PASSWORD": "${BITMAGNENT_DB_PASSWORD}",
+        "POSTGRES_USER": "tipi",
+        "POSTGRES_DB": "bitmagnet"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "healthCheck": {
+        "interval": "30s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "20s",
+        "test": "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"
+      }
+    },
+    {
+      "name": "bitmagnet-redis",
+      "image": "docker.io/library/redis:alpine",
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/redis",
+          "containerPath": "/data"
+        }
+      ],
+      "command": "--save 60 1 --loglevel warning",
+      "healthCheck": {
+        "interval": "30s",
+        "timeout": "3s",
+        "retries": 5,
+        "startPeriod": "20s",
+        "test": "redis-cli ping | grep PONG"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.7'
+services:
+  bitmagnet:
+    image: ghcr.io/bitmagnet-io/bitmagnet:v0.9.5
+    restart: unless-stopped
+    command:
+    - worker
+    - run
+    - --keys=http_server
+    - --keys=queue_server
+    - --keys=dht_crawler
+    container_name: bitmagnet
+    environment:
+    - POSTGRES_HOST=bitmagnet-db
+    - POSTGRES_NAME=bitmagnet
+    - POSTGRES_USER=tipi
+    - POSTGRES_PASSWORD=${BITMAGNENT_DB_PASSWORD}
+    - REDIS_ADDR=bitmagnet-redis:6379
+    ports:
+    - ${APP_PORT}:3333
+    - 3334:3334/tcp
+    - 3334:3334/udp
+    depends_on:
+      bitmagnet-db:
+        condition: service_healthy
+      bitmagnet-redis:
+        condition: service_started
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.bitmagnet-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.bitmagnet.loadbalancer.server.port: 3333
+      traefik.http.routers.bitmagnet-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.bitmagnet-insecure.entrypoints: web
+      traefik.http.routers.bitmagnet-insecure.service: bitmagnet
+      traefik.http.routers.bitmagnet-insecure.middlewares: bitmagnet-web-redirect
+      traefik.http.routers.bitmagnet.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.bitmagnet.entrypoints: websecure
+      traefik.http.routers.bitmagnet.service: bitmagnet
+      traefik.http.routers.bitmagnet.tls.certresolver: myresolver
+      traefik.http.routers.bitmagnet-local-insecure.rule: Host(`bitmagnet.${LOCAL_DOMAIN}`)
+      traefik.http.routers.bitmagnet-local-insecure.entrypoints: web
+      traefik.http.routers.bitmagnet-local-insecure.service: bitmagnet
+      traefik.http.routers.bitmagnet-local-insecure.middlewares: bitmagnet-web-redirect
+      traefik.http.routers.bitmagnet-local.rule: Host(`bitmagnet.${LOCAL_DOMAIN}`)
+      traefik.http.routers.bitmagnet-local.entrypoints: websecure
+      traefik.http.routers.bitmagnet-local.service: bitmagnet
+      traefik.http.routers.bitmagnet-local.tls: true
+      runtipi.managed: true
+  bitmagnet-db:
+    container_name: bitmagnet-db
+    image: docker.io/library/postgres:17-alpine
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${BITMAGNENT_DB_PASSWORD}
+      POSTGRES_USER: tipi
+      POSTGRES_DB: bitmagnet
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  bitmagnet-redis:
+    image: docker.io/library/redis:alpine
+    command: --save 60 1 --loglevel warning
+    container_name: bitmagnet-redis
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - redis-cli ping | grep PONG
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+    - ${APP_DATA_DIR}/data/redis:/data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
