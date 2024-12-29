@@ -1,33 +1,99 @@
-# Atuin Server
 
-Once installed, [configure your client](https://docs.atuin.sh/self-hosting/usage/) to use `<your-tipi-ip>:8888` as sync address.
-
-## Making your shell magical
-
-Sync, search and backup shell history with Atuin
-
-[Atuin](https://atuin.sh) is an open-source Terminal User Interface (TUI) for your shell history.
-
-![Atuin TUI screenshot](https://atuin.sh/_astro/cargo-prefix.322ce063_Z3NFdB.avif)
-
-## Features
-
-1. Shell History Sync
-    - Sync your shell history to all of your machines, wherever they are
-2. End-to-end Encryption 
-    - All data is encrypted, and can only be read by you
-3. Efficient Search
-    - Search decades of shell history, and recall it in an instant. Atuin offers configurable full text or fuzzy search, filterable by host, directory, etc.
-4. Data Import
-    - Bring your existing history with you - Atuin supports importing from a wide variety of formats
-5. Store Extra Context
-    - Atuin stores extra context with your commands - working directory, exit code, and more!
-
-## Self-hosted sync server
-
-Atuin.sh offers a free, fully-encrypted option for storing your synced shell history as well as an option to self-host a sync server of your own. This is an easy-to-use package for the Atuin sync server component; the user interface is the TUI, which can be installed using many typical package-management tools, e.g.
-
-- `brew install atuin`
-- `apt install atuin`
-
-or via `bash <(curl --proto '=https' --tlsv1.2 -sSf https://setup.atuin.sh)`.
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "atuin",
+      "image": "ghcr.io/atuinsh/atuin:18.4.0",
+      "isMain": true,
+      "internalPort": 8888,
+      "environment": {
+        "ATUIN_PORT": "8888",
+        "ATUIN_HOST": "0.0.0.0",
+        "ATUIN_OPEN_REGISTRATION": "${ATUIN_ALLOW_REGISTRATION}",
+        "ATUIN_DB_URI": "postgres://atuin:${ATUIN_DB_PASSWORD}@atuin-db/atuin"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/config",
+          "containerPath": "/config"
+        }
+      ],
+      "command": "server start"
+    },
+    {
+      "name": "atuin-db",
+      "image": "postgres:14",
+      "environment": {
+        "POSTGRES_USER": "atuin",
+        "POSTGRES_PASSWORD": "${ATUIN_DB_PASSWORD}",
+        "POSTGRES_DB": "atuin"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/postgres",
+          "containerPath": "/var/lib/postgresql/data/"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.5'
+services:
+  atuin:
+    container_name: atuin
+    restart: unless-stopped
+    image: ghcr.io/atuinsh/atuin:18.4.0
+    command: server start
+    volumes:
+    - ${APP_DATA_DIR}/data/config:/config
+    ports:
+    - ${APP_PORT}:8888
+    environment:
+    - ATUIN_PORT=8888
+    - ATUIN_HOST=0.0.0.0
+    - ATUIN_OPEN_REGISTRATION=${ATUIN_ALLOW_REGISTRATION}
+    - ATUIN_DB_URI=postgres://atuin:${ATUIN_DB_PASSWORD}@atuin-db/atuin
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.atuin-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.atuin.loadbalancer.server.port: 8888
+      traefik.http.routers.atuin-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.atuin-insecure.entrypoints: web
+      traefik.http.routers.atuin-insecure.service: atuin
+      traefik.http.routers.atuin-insecure.middlewares: atuin-web-redirect
+      traefik.http.routers.atuin.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.atuin.entrypoints: websecure
+      traefik.http.routers.atuin.service: atuin
+      traefik.http.routers.atuin.tls.certresolver: myresolver
+      traefik.http.routers.atuin-local-insecure.rule: Host(`atuin.${LOCAL_DOMAIN}`)
+      traefik.http.routers.atuin-local-insecure.entrypoints: web
+      traefik.http.routers.atuin-local-insecure.service: atuin
+      traefik.http.routers.atuin-local-insecure.middlewares: atuin-web-redirect
+      traefik.http.routers.atuin-local.rule: Host(`atuin.${LOCAL_DOMAIN}`)
+      traefik.http.routers.atuin-local.entrypoints: websecure
+      traefik.http.routers.atuin-local.service: atuin
+      traefik.http.routers.atuin-local.tls: true
+      runtipi.managed: true
+  atuin-db:
+    container_name: atuin-db
+    image: postgres:14
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data/
+    environment:
+    - POSTGRES_USER=atuin
+    - POSTGRES_PASSWORD=${ATUIN_DB_PASSWORD}
+    - POSTGRES_DB=atuin
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
