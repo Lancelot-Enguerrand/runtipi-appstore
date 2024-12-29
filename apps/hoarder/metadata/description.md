@@ -1,30 +1,129 @@
-### Hoarder
 
-A self-hostable bookmark-everything app with a touch of AI for the data hoarders out there.
-
-![homepage screenshot](https://github.com/hoarder-app/hoarder/blob/main/screenshots/homepage.png?raw=true)
-
-## Features
-
-- 🔗 Bookmark links, take simple notes and store images and pdfs.
-- ⬇️ Automatic fetching for link titles, descriptions and images.
-- 📋 Sort your bookmarks into lists.
-- 🔎 Full text search of all the content stored.
-- ✨ AI-based (aka chatgpt) automatic tagging. With supports for local models using ollama!
-- 🔖 [Chrome plugin](https://chromewebstore.google.com/detail/hoarder/kgcjekpmcjjogibpjebkhaanilehneje) and [Firefox addon](https://addons.mozilla.org/en-US/firefox/addon/hoarder/) for quick bookmarking.
-- 📱 An [iOS app](https://apps.apple.com/us/app/hoarder-app/id6479258022), and an [Android app](https://play.google.com/store/apps/details?id=app.hoarder.hoardermobile&pcampaignid=web_share).
-- 🗄️ Full page archival (using [monolith](https://github.com/Y2Z/monolith)) to protect against link rot.
-- ☑️ Bulk actions support.
-- 🌙 Dark mode support.
-- 💾 Self-hosting first.
-- [Planned] Downloading the content for offline reading.
-
-**⚠️ This app is under heavy development and it's far from stable.**
-
-## Documentation
-
-- [Installation](https://docs.hoarder.app/installation/docker)
-- [Configuration](https://docs.hoarder.app/configuration)
-- [Screenshots](https://docs.hoarder.app/screenshots)
-- [Security Considerations](https://docs.hoarder.app/security-considerations)
-- [Development](https://docs.hoarder.app/Development/setup)
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "hoarder",
+      "image": "ghcr.io/hoarder-app/hoarder:0.20.0",
+      "isMain": true,
+      "internalPort": 3000,
+      "environment": {
+        "MEILI_ADDR": "http://hoarder-meilisearch:7700",
+        "BROWSER_WEB_URL": "http://hoarder-chrome:9222",
+        "DATA_DIR": "/data",
+        "HOARDER_VERSION": "0.16.0",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "NEXTAUTH_SECRET": "${NEXTAUTH_SECRET}",
+        "MEILI_MASTER_KEY": "${MEILI_MASTER_KEY}",
+        "NEXTAUTH_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/app",
+          "containerPath": "/data"
+        }
+      ]
+    },
+    {
+      "name": "hoarder-chrome",
+      "image": "gcr.io/zenika-hub/alpine-chrome:124",
+      "command": [
+        "--no-sandbox",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--remote-debugging-address=0.0.0.0",
+        "--remote-debugging-port=9222",
+        "--hide-scrollbars"
+      ]
+    },
+    {
+      "name": "hoarder-meilisearch",
+      "image": "getmeili/meilisearch:v1.12",
+      "environment": {
+        "MEILI_NO_ANALYTICS": "true",
+        "MEILI_MASTER_KEY": "${MEILI_MASTER_KEY}"
+      },
+      "volumes": [
+        {
+          "hostPath": "${APP_DATA_DIR}/data/melli_data",
+          "containerPath": "/meili_data"
+        }
+      ]
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+services:
+  hoarder:
+    image: ghcr.io/hoarder-app/hoarder:0.20.0
+    container_name: hoarder
+    restart: unless-stopped
+    volumes:
+    - ${APP_DATA_DIR}/data/app:/data
+    ports:
+    - ${APP_PORT}:3000
+    environment:
+    - MEILI_ADDR=http://hoarder-meilisearch:7700
+    - BROWSER_WEB_URL=http://hoarder-chrome:9222
+    - DATA_DIR=/data
+    - HOARDER_VERSION=0.16.0
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    - NEXTAUTH_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.hoarder-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.hoarder.loadbalancer.server.port: 3000
+      traefik.http.routers.hoarder-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hoarder-insecure.entrypoints: web
+      traefik.http.routers.hoarder-insecure.service: hoarder
+      traefik.http.routers.hoarder-insecure.middlewares: hoarder-web-redirect
+      traefik.http.routers.hoarder.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hoarder.entrypoints: websecure
+      traefik.http.routers.hoarder.service: hoarder
+      traefik.http.routers.hoarder.tls.certresolver: myresolver
+      traefik.http.routers.hoarder-local-insecure.rule: Host(`hoarder.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hoarder-local-insecure.entrypoints: web
+      traefik.http.routers.hoarder-local-insecure.service: hoarder
+      traefik.http.routers.hoarder-local-insecure.middlewares: hoarder-web-redirect
+      traefik.http.routers.hoarder-local.rule: Host(`hoarder.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hoarder-local.entrypoints: websecure
+      traefik.http.routers.hoarder-local.service: hoarder
+      traefik.http.routers.hoarder-local.tls: true
+      runtipi.managed: true
+  hoarder-chrome:
+    image: gcr.io/zenika-hub/alpine-chrome:124
+    container_name: hoarder-chrome
+    restart: unless-stopped
+    command:
+    - --no-sandbox
+    - --disable-gpu
+    - --disable-dev-shm-usage
+    - --remote-debugging-address=0.0.0.0
+    - --remote-debugging-port=9222
+    - --hide-scrollbars
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+  hoarder-meilisearch:
+    image: getmeili/meilisearch:v1.12
+    container_name: hoarder-meilisearch
+    restart: unless-stopped
+    environment:
+    - MEILI_NO_ANALYTICS=true
+    - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    volumes:
+    - ${APP_DATA_DIR}/data/melli_data:/meili_data
+    networks:
+    - tipi_main_network
+    labels:
+      runtipi.managed: true
+ 
+```
