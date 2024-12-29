@@ -1,31 +1,102 @@
-## Whisparr
 
-Whisparr is an adult movie collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new movies and will interface with clients and indexers to grab, sort, and rename them. It can also be configured to automatically upgrade the quality of existing files in the library when a better quality format becomes available.
-Note that only one type of a given movie is supported. If you want both an 4k version and 1080p version of a given movie you will need multiple instances.
-
-## Major Features Include
-
-* Adding new movies with lots of information, such as trailers, ratings, etc.
-* Support for major platforms: Windows, Linux, macOS, Raspberry Pi, etc.
-* Can watch for better quality of the movies you have and do an automatic upgrade. *e.g. from DVD to Blu-Ray*
-* Automatic failed download handling will try another release if one fails
-* Manual search so you can pick any release or to see why a release was not downloaded automatically
-* Full integration with SABnzbd and NZBGet
-* Automatically searching for releases as well as RSS Sync
-* Automatically importing downloaded movies
-* Recognizing Special Editions, Director's Cut, etc.
-* Identifying releases with hardcoded subs
-* Identifying releases with AKA movie names
-* SABnzbd, NZBGet, QBittorrent, Deluge, rTorrent, Transmission, uTorrent, and other download clients are supported and integrated
-* Full integration with Kodi and Plex (notifications, library updates)
-* Importing Metadata such as trailers or subtitles
-* Adding metadata such as posters and information for Kodi and others to use
-* Advanced customization for profiles, such that Whisparr will always download the copy you want
-* A beautiful UI
-
-## Folder Info
-
-| Root Folder                     | Container Folder |
-|---------------------------------|------------------|
-| /runtipi/app-data/whisparr/data | /config          |
-| /runtipi/media                  | /media           |
+# JSON
+```json
+{
+  "services": [
+    {
+      "name": "whisparr",
+      "image": "ghcr.io/hotio/whisparr:nightly-2.0.0.548",
+      "isMain": true,
+      "internalPort": 6969,
+      "hostname": "${APP_ID}",
+      "environment": {
+        "PUID": "${WHISPARR_PUID-1000}",
+        "PGID": "${WHISPARR_PGID-1000}",
+        "UMASK": "${WHISPARR_UMASK-002}",
+        "TZ": "${TZ}"
+      },
+      "volumes": [
+        {
+          "hostPath": "/etc/localtime",
+          "containerPath": "/etc/localtime",
+          "readOnly": true
+        },
+        {
+          "hostPath": "/etc/timezone",
+          "containerPath": "/etc/timezone",
+          "readOnly": true
+        },
+        {
+          "hostPath": "${APP_DATA_DIR}/data",
+          "containerPath": "/config"
+        },
+        {
+          "hostPath": "${ROOT_FOLDER_HOST}/media",
+          "containerPath": "/media"
+        }
+      ],
+      "healthCheck": {
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s",
+        "test": "timeout 5s bash -c ':> /dev/tcp/127.0.0.1/6969' || exit 1"
+      }
+    }
+  ]
+} 
+```
+# YAML
+```yaml
+version: '3.9'
+services:
+  whisparr:
+    container_name: whisparr
+    hostname: ${APP_ID}
+    image: ghcr.io/hotio/whisparr:nightly-2.0.0.548
+    ports:
+    - ${APP_PORT}:6969
+    environment:
+    - PUID=${WHISPARR_PUID-1000}
+    - PGID=${WHISPARR_PGID-1000}
+    - UMASK=${WHISPARR_UMASK-002}
+    - TZ=${TZ}
+    dns:
+    - ${DNS_IP}
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro
+    - ${APP_DATA_DIR}/data:/config
+    - ${ROOT_FOLDER_HOST}/media:/media
+    healthcheck:
+      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/6969' || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.whisparr-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.whisparr.loadbalancer.server.port: 6969
+      traefik.http.routers.whisparr-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.whisparr-insecure.entrypoints: web
+      traefik.http.routers.whisparr-insecure.service: whisparr
+      traefik.http.routers.whisparr-insecure.middlewares: whisparr-web-redirect
+      traefik.http.routers.whisparr.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.whisparr.entrypoints: websecure
+      traefik.http.routers.whisparr.service: whisparr
+      traefik.http.routers.whisparr.tls.certresolver: myresolver
+      traefik.http.routers.whisparr-local-insecure.rule: Host(`whisparr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.whisparr-local-insecure.entrypoints: web
+      traefik.http.routers.whisparr-local-insecure.service: whisparr
+      traefik.http.routers.whisparr-local-insecure.middlewares: whisparr-web-redirect
+      traefik.http.routers.whisparr-local.rule: Host(`whisparr.${LOCAL_DOMAIN}`)
+      traefik.http.routers.whisparr-local.entrypoints: websecure
+      traefik.http.routers.whisparr-local.service: whisparr
+      traefik.http.routers.whisparr-local.tls: true
+      runtipi.managed: true
+ 
+```
