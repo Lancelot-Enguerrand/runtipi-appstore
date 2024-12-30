@@ -8,7 +8,7 @@
       "environment": {
         "BASE_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
         "TRUST_PROXY": "1",
-        "DATABASE_URL": "postgresql://postgres@postgres/planka",
+        "DATABASE_URL": "postgresql://postgres@planka-db/planka",
         "SECRET_KEY": "${PLANKA_SECRET_KEY}"
       },
       "dependsOn": ["postgres"],
@@ -28,7 +28,7 @@
       ],
     },
     {
-      "name": "postgres",
+      "name": "planka-db",
       "image": "postgres:14-alpine",
       "environment": {
         "POSTGRES_DB": "planka",
