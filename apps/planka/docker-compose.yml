@@ -4,14 +4,6 @@ services:
   planka:
     image: ghcr.io/plankanban/planka:1.24.3
     container_name: planka
-    command: >
-      bash -c
-        "for i in `seq 1 30`; do
-          ./start.sh &&
-          s=$$? && break || s=$$?;
-          echo \"Tried $$i times. Waiting 5 seconds...\";
-          sleep 5;
-        done; (exit $$s)"
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/data/user-avatars:/app/public/user-avatars
@@ -22,7 +14,7 @@ services:
     environment:
       - BASE_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       - TRUST_PROXY=1
-      - DATABASE_URL="postgresql://postgres@postgres/planka"
+      - DATABASE_URL="postgresql://postgres@planka-db/planka"
       - SECRET_KEY="${PLANKA_SECRET_KEY}"
     networks:
       - tipi_main_network
@@ -55,7 +47,7 @@ services:
     depends_on:
       - postgres
 
-  postgres:
+  planka-db:
     image: postgres:14-alpine
     container_name: planka-db
     restart: unless-stopped
@@ -64,6 +56,11 @@ services:
     environment:
       POSTGRES_DB: "planka"
       POSTGRES_HOST_AUTH_METHOD: "trust"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d planka"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - tipi_main_network
     labels:
