@@ -45,10 +45,11 @@ services:
       traefik.http.routers.planka-local.tls: true
       runtipi.managed: true
     depends_on:
-      - planka-db
+      planka-db:
+        condition: service_healthy
 
   planka-db:
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     container_name: planka-db
     restart: unless-stopped
     volumes:
