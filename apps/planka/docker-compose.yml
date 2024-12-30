@@ -45,7 +45,7 @@ services:
       traefik.http.routers.planka-local.tls: true
       runtipi.managed: true
     depends_on:
-      - postgres
+      - planka-db
 
   planka-db:
     image: postgres:14-alpine
