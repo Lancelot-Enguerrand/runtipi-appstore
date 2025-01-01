@@ -37,7 +37,6 @@
       "max": 32,
       "env_variable": "POSTIZ_PGDB_PASSWORD"
     },
-    "form_fields": [
     {
       "type": "text",
       "label": "Discord API - ID",
@@ -45,7 +44,6 @@
       "hint": "https://docs.postiz.com/providers/discord",
       "env_variable": "DISCORD_CLIENT_ID"
     },
-    "form_fields": [
     {
       "type": "text",
       "label": "Discord API - Secret",
@@ -117,7 +115,7 @@
       "required": false,
       "env_variable": "PINTEREST_CLIENT_SECRET"
     },
-   {
+    {
       "type": "text",
       "label": "Reddit API - ID",
       "required": false,
