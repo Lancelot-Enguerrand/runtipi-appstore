@@ -145,6 +145,19 @@
     },
     {
       "type": "text",
+      "label": "Threads API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/threads",
+      "env_variable": "THREADS_APP_ID"
+    },
+    {
+      "type": "text",
+      "label": "Threads API - Secret",
+      "required": false,
+      "env_variable": "THREADS_APP_SECRET"
+    },
+    {
+      "type": "text",
       "label": "Tiktok API - ID",
       "required": false,
       "hint": "https://docs.postiz.com/providers/tiktok",
