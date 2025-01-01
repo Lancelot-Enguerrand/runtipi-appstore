@@ -14,7 +14,7 @@
   "source": "https://github.com/gitroomhq/postiz-app/",
   "form_fields": [
     {
-      "type": "text",
+      "type": "email",
       "label": "Database admin email",
       "required": true,
       "min": 10,
@@ -36,6 +36,151 @@
       "min": 32,
       "max": 32,
       "env_variable": "POSTIZ_PGDB_PASSWORD"
+    },
+    "form_fields": [
+    {
+      "type": "text",
+      "label": "Discord API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/discord",
+      "env_variable": "DISCORD_CLIENT_ID"
+    },
+    "form_fields": [
+    {
+      "type": "text",
+      "label": "Discord API - Secret",
+      "required": false,
+      "env_variable": "DISCORD_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Dribble API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/dribble",
+      "env_variable": "DRIBBLE_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Dribble API - Secret",
+      "required": false,
+      "env_variable": "DRIBBLE_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Facebook & Instagram API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/facebook",
+      "env_variable": "FACEBOOK_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Facebook & Instagram API - Secret",
+      "required": false,
+      "env_variable": "FACEBOOK_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "LinkedIn API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/linkedin",
+      "env_variable": "LINKEDIN_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "LinkedIn API - Secret",
+      "required": false,
+      "env_variable": "LINKEDIN_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Mastodon API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/mastodon",
+      "env_variable": "MASTODON_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Mastodon API - Secret",
+      "required": false,
+      "env_variable": "MASTODON_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Pinterest API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/pinterest",
+      "env_variable": "PINTEREST_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Pinterest API - Secret",
+      "required": false,
+      "env_variable": "PINTEREST_CLIENT_SECRET"
+    },
+   {
+      "type": "text",
+      "label": "Reddit API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/reddit",
+      "env_variable": "REDDIT_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Reddit API - Secret",
+      "required": false,
+      "env_variable": "REDDIT_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Slack API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/slack",
+      "env_variable": "SLACK_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Slack API - Secret",
+      "required": false,
+      "env_variable": "SLACK_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Tiktok API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/tiktok",
+      "env_variable": "TIKTOK_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Tiktok API - Secret",
+      "required": false,
+      "env_variable": "TIKTOK_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "X API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/x",
+      "env_variable": "X_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "X API - Secret",
+      "required": false,
+      "env_variable": "X_CLIENT_SECRET"
+    },
+    {
+      "type": "text",
+      "label": "Youtube API - ID",
+      "required": false,
+      "hint": "https://docs.postiz.com/providers/Youtube",
+      "env_variable": "YOUTUBE_CLIENT_ID"
+    },
+    {
+      "type": "text",
+      "label": "Youtube API - Secret",
+      "required": false,
+      "env_variable": "YOUTUBE_CLIENT_SECRET"
     },
     {
       "type": "random",
