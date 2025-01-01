@@ -52,7 +52,7 @@
         }
       ],
       "healthCheck": {
-        "test": "pg_isready -h localhost -U tipi -d ${POSTIZ_PGDB_PASSWORD}"
+        "test": "pg_isready -h localhost -U tipi -d postiz-db-local",
         "interval": "5s",
         "timeout": "5s",
         "retries": 10
@@ -87,7 +87,7 @@
         }
       ],
       "healthCheck": {
-        "test": "redis-cli ping"
+        "test": "redis-cli ping",
         "interval": "5s",
         "timeout": "5s",
         "retries": 10
