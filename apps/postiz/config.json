@@ -1,0 +1,52 @@
+{
+  "name": "Postiz",
+  "available": true,
+  "exposable": true,
+  "dynamic_config": true,
+  "port": 7921,
+  "id": "postiz",
+  "tipi_version": 1,
+  "version": "1.19.1",
+  "categories": ["social"],
+  "description": "Postiz is a social media scheduling tool supporting multiple social media channels: Instagram, Facebook, TikTok, Reddit, LinkedIn, X, Threads, BlueSky, Mastodon, YouTube, Pinterest, Dribbble, Slack, and Discord.",
+  "short_desc": "Postiz is a social media scheduling tool supporting multiple social media channels",
+  "author": "https://github.com/gitroomhq",
+  "source": "https://github.com/gitroomhq/postiz-app/",
+  "form_fields": [
+    {
+      "type": "text",
+      "label": "Database admin email",
+      "required": true,
+      "min": 10,
+      "max": 60,
+      "env_variable": "POSTIZ_PGADMIN_PASSWORD"
+    },
+    {
+      "type": "random",
+      "label": "Database admin password",
+      "required": true,
+      "min": 8,
+      "max": 60,
+      "env_variable": "POSTIZ_PGADMIN_PASSWORD"
+    },
+    {
+      "type": "random",
+      "label": "Postiz postgres password",
+      "required": false,
+      "min": 32,
+      "max": 32,
+      "env_variable": "POSTIZ_PGDB_PASSWORD"
+    },
+    {
+      "type": "random",
+      "label": "JWT Secret",
+      "required": false,
+      "min": 32,
+      "max": 32,
+      "env_variable": "POSTIZ_JWT_SECRET"
+    }
+  ],
+  "supported_architectures": ["arm64"],
+  "created_at": 1735732547457,
+  "updated_at": 1735732547458
+}

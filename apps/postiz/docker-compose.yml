@@ -1,0 +1,106 @@
+services:
+  postiz:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: postiz
+    restart: always
+    environment:
+      MAIN_URL: "${APP_PROTOCOL:-http}://${APP_DOMAIN}"
+      FRONTEND_URL: "${APP_PROTOCOL:-http}://${APP_DOMAIN}"
+      NEXT_PUBLIC_BACKEND_URL: "${APP_PROTOCOL:-http}://${APP_DOMAIN}/api"
+      JWT_SECRET: "${POSTIZ_JWT_SECRET}"
+      DATABASE_URL: "postgresql://tipi:${POSTIZ_PGDB_PASSWORD}@postiz-db:5432/postiz-db-local"
+      REDIS_URL: "redis://postiz-redis:6379"
+      BACKEND_INTERNAL_URL: "http://localhost:3000"
+      IS_GENERAL: "true" # Required for self-hosting.
+      STORAGE_PROVIDER: "local"
+      UPLOAD_DIRECTORY: "/uploads"
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
+    volumes:
+      - ${APP_DATA_DIR}/data/config:/config/
+      - ${APP_DATA_DIR}/data/uploads:/uploads/
+    ports:
+      - ${APP_PORT}:5000
+    networks:
+      - tipi_main_network
+    depends_on:
+      postiz-db:
+        condition: service_healthy
+      postiz-redis:
+        condition: service_healthy
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.hoarder-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.hoarder.loadbalancer.server.port: 5000
+      traefik.http.routers.hoarder-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hoarder-insecure.entrypoints: web
+      traefik.http.routers.hoarder-insecure.service: postiz
+      traefik.http.routers.hoarder-insecure.middlewares: postiz-web-redirect
+      traefik.http.routers.hoarder.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.hoarder.entrypoints: websecure
+      traefik.http.routers.hoarder.service: postiz
+      traefik.http.routers.hoarder.tls.certresolver: myresolver
+      traefik.http.routers.hoarder-local-insecure.rule: Host(`postiz.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hoarder-local-insecure.entrypoints: web
+      traefik.http.routers.hoarder-local-insecure.service: postiz
+      traefik.http.routers.hoarder-local-insecure.middlewares: postiz-web-redirect
+      traefik.http.routers.hoarder-local.rule: Host(`postiz.${LOCAL_DOMAIN}`)
+      traefik.http.routers.hoarder-local.entrypoints: websecure
+      traefik.http.routers.hoarder-local.service: postiz
+      traefik.http.routers.hoarder-local.tls: true
+      runtipi.managed: true
+  postiz-db:
+    image: postgres:17-alpine
+    container_name: postiz-db
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTIZ_PGDB_PASSWORD}
+      POSTGRES_USER: tipi
+      POSTGRES_DB: postiz-db-local
+    volumes:
+      - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    networks:
+      - tipi_main_network
+    labels:
+      runtipi.managed: true
+  postiz-pg-admin:
+    image: dpage/pgadmin4:latest
+    container_name: postiz-pg-admin
+    restart: always
+    ports:
+      - 7922:80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${POSTIZ_PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${POSTIZ_PGADMIN_PASSWORD}
+    networks:
+      - tipi_main_network
+    labels:
+      runtipi.managed: true
+  postiz-redis:
+    image: redis:7-alpine
+    container_name: postiz-redis
+    restart: always
+    networks:
+      - tipi_main_network
+    labels:
+      runtipi.managed: true
+  postiz-redisinsight:
+    image: redis/redisinsight:latest
+    container_name: postiz-redisinsight
+    restart: always
+    links:
+      - postiz-redis
+    volumes:
+      - ${APP_DATA_DIR}/data/redisinsight:/data
+    networks:
+      - tipi_main_network
+    labels:
+      runtipi.managed: true
+
+volumes:
+  redisinsight:
+  postgres-volume:
+    external: false
+
+networks:
+  tipi_main_network:
+    external: false
