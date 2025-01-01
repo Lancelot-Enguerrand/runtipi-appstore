@@ -50,7 +50,13 @@
           "hostPath": "${APP_DATA_DIR}/data/db",
           "containerPath": "/var/lib/postgresql/data"
         }
-      ]
+      ],
+      "healthCheck": {
+        "test": "pg_isready -h localhost -U tipi -d ${POSTIZ_PGDB_PASSWORD}"
+        "interval": "5s",
+        "timeout": "5s",
+        "retries": 10
+      }
     },
     {
       "name": "postiz-pg-admin",
@@ -79,7 +85,13 @@
           "hostPath": "${APP_DATA_DIR}/data/redisinsight",
           "containerPath": "/data"
         }
-      ]
+      ],
+      "healthCheck": {
+        "test": "redis-cli ping"
+        "interval": "5s",
+        "timeout": "5s",
+        "retries": 10
+      }
     }
   ]
 }
