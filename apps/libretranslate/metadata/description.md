@@ -1,7 +1,65 @@
-# LibreTranslate
+# Checklist
+## Dynamic compose for libretranslate
+This is a libretranslate update for using dynamic compose.
+##### Reaching the app :
+- [ ] http://localip:port
+- [ ] https://libretranslate.tipi.local
+##### In app tests :
+- [ ] 📝 Register and log in
+- [ ] 🖱 Basic interaction
+- [ ] 🌆 Uploading data
+- [ ] 🔄 Check data after restart
+##### Specific instructions :
+- 🏷 DNS (skipped)
 
-[Try it online!](https://libretranslate.com) | [API Docs](https://libretranslate.com/docs) | [Community Forum](https://community.libretranslate.com/)
-
-Free and Open Source Machine Translation API, entirely self-hosted. Unlike other APIs, it doesn't rely on proprietary providers such as Google or Azure to perform translations. Instead, its translation engine is powered by the open source [Argos Translate](https://github.com/argosopentech/argos-translate) library.
-
-![image](https://user-images.githubusercontent.com/64697405/139015751-279f31ac-36f1-4950-9ea7-87e76bf65f51.png)
+# New JSON
+```json
+{
+  "$schema": "../dynamic-compose-schema.json",
+  "services": [
+    {
+      "name": "libretranslate",
+      "image": "libretranslate/libretranslate:v1.6.2",
+      "isMain": true,
+      "internalPort": 5000
+    }
+  ]
+} 
+```
+# Original YAML
+```yaml
+version: '3.7'
+services:
+  libretranslate:
+    container_name: libretranslate
+    image: libretranslate/libretranslate:v1.6.2
+    dns:
+    - ${DNS_IP}
+    ports:
+    - ${APP_PORT}:5000
+    restart: unless-stopped
+    networks:
+    - tipi_main_network
+    labels:
+      traefik.enable: true
+      traefik.http.middlewares.libretranslate-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.libretranslate.loadbalancer.server.port: 5000
+      traefik.http.routers.libretranslate-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.libretranslate-insecure.entrypoints: web
+      traefik.http.routers.libretranslate-insecure.service: libretranslate
+      traefik.http.routers.libretranslate-insecure.middlewares: libretranslate-web-redirect
+      traefik.http.routers.libretranslate.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.libretranslate.entrypoints: websecure
+      traefik.http.routers.libretranslate.service: libretranslate
+      traefik.http.routers.libretranslate.tls.certresolver: myresolver
+      traefik.http.routers.libretranslate-local-insecure.rule: Host(`libretranslate.${LOCAL_DOMAIN}`)
+      traefik.http.routers.libretranslate-local-insecure.entrypoints: web
+      traefik.http.routers.libretranslate-local-insecure.service: libretranslate
+      traefik.http.routers.libretranslate-local-insecure.middlewares: libretranslate-web-redirect
+      traefik.http.routers.libretranslate-local.rule: Host(`libretranslate.${LOCAL_DOMAIN}`)
+      traefik.http.routers.libretranslate-local.entrypoints: websecure
+      traefik.http.routers.libretranslate-local.service: libretranslate
+      traefik.http.routers.libretranslate-local.tls: true
+      runtipi.managed: true
+ 
+```
