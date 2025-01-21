@@ -33,7 +33,7 @@
     {
       "name": "pixelfed-worker",
       "image": "elestio/pixelfed:latest",
-      "dependsOn": ["db","redis"],
+      "dependsOn": ["pixelfed-db","pixelfed-redis"],
       "volumes": [
         {
           "hostPath": "${APP_DATA_DIR}/data/app",
