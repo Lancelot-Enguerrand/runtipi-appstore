@@ -23,10 +23,6 @@
         {
           "hostPath": "${APP_DATA_DIR}/data/app",
           "containerPath": "/var/www/storage"
-        },
-        {
-          "hostPath": "${APP_DATA_DIR}/data/.env",
-          "containerPath": "/var/www/.env"
         }
       ]
     },
@@ -38,10 +34,6 @@
         {
           "hostPath": "${APP_DATA_DIR}/data/app",
           "containerPath": "/var/www/storage"
-        },
-        {
-          "hostPath": "${APP_DATA_DIR}/data/.env",
-          "containerPath": "/var/www/.env"
         }
       ],
       "command": "gosu www-data php artisan horizon"
