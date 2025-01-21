@@ -34,7 +34,7 @@
     },
     {
       "type": "boolean",
-      "label": "Open registration",
+      "label": "Enforce email verification",
       "required": true,
       "env_variable": "PIXELFED_ENFORCE_EMAIL_VERIFICATION"
     },
@@ -45,6 +45,14 @@
       "min": 30,
       "max": 30,
       "env_variable": "PIXELFED_DB_PASSWORD"
+    },
+    {
+      "type": "random",
+      "label": "Redis password",
+      "required": false,
+      "min": 30,
+      "max": 30,
+      "env_variable": "PIXELFED_REDIS_PASSWORD"
     }
   ],
   "supported_architectures": ["arm64", "amd64"],
