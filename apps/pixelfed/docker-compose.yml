@@ -1,0 +1,83 @@
+services:
+  pixelfed:
+    image: elestio/pixelfed:latest
+    restart: unless-stopped
+    environment:
+      - ADMIN_EMAIL="${PIXELFED_ADMIN_EMAIL}"
+      - ADMIN_PASSWORD="${PIXELFED_ADMIN_PASSWORD}"
+      - APP_URL="${APP_PROTOCOL-http}://${APP_DOMAIN}"
+      - OPEN_REGISTRATION="${PIXELFED_OPEN_REGISTRATION}"
+      - ENFORCE_EMAIL_VERIFICATION="${PIXELFED_ENFORCE_EMAIL_VERIFICATION}"
+      - APP_ENV="production"
+      - DB_CONNECTION="mysql"
+      - DB_HOST="pixelfed-db"
+      - DB_DATABASE="pixelfed"
+      - DB_USERNAME="pixelfed"
+      - DB_PASSWORD="${PIXELFED_DB_PASSWORD}"
+    volumes:
+      - ${APP_DATA_DIR}/data/app:/var/www/storage 
+      - "${APP_DATA_DIR}/data/.env:/var/www/.env"
+    ports:
+      - ${APP_PORT}:80
+    depends_on:
+      - db
+      - redis
+    networks:
+      - tipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.pixelfed-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.pixelfed.loadbalancer.server.port: 80
+      # Web
+      traefik.http.routers.pixelfed-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.pixelfed-insecure.entrypoints: web
+      traefik.http.routers.pixelfed-insecure.service: pixelfed
+      traefik.http.routers.pixelfed-insecure.middlewares: pixelfed-web-redirect
+      # Websecure
+      traefik.http.routers.pixelfed.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.pixelfed.entrypoints: websecure
+      traefik.http.routers.pixelfed.service: pixelfed
+      traefik.http.routers.pixelfed.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.pixelfed-local-insecure.rule: Host(`pixelfed.${LOCAL_DOMAIN}`)
+      traefik.http.routers.pixelfed-local-insecure.entrypoints: web
+      traefik.http.routers.pixelfed-local-insecure.service: pixelfed
+      traefik.http.routers.pixelfed-local-insecure.middlewares: pixelfed-web-redirect
+      # Local domain secure
+      traefik.http.routers.pixelfed-local.rule: Host(`pixelfed.${LOCAL_DOMAIN}`)
+      traefik.http.routers.pixelfed-local.entrypoints: websecure
+      traefik.http.routers.pixelfed-local.service: pixelfed
+      traefik.http.routers.pixelfed-local.tls: true
+      runtipi.managed: true
+
+  pixelfed-worker:
+    image: elestio/pixelfed:latest
+    restart: unless-stopped
+    volumes:
+      -  ${APP_DATA_DIR}/data/app:/var/www/storage
+      - "${APP_DATA_DIR}/data/.env:/var/www/.env"
+    command: gosu www-data php artisan horizon
+    depends_on:
+      - db
+      - redis
+
+  pixelfed-db:
+    image: mariadb:jammy
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+     - MYSQL_DATABASE="pixelfed"
+     - MYSQL_USER="pixelfed"
+     - MYSQL_PASSWORD="${PIXELFED_DB_PASSWORD}"
+    volumes:
+      - "${APP_DATA_DIR}/data/db:/var/lib/mysql"
+
+  pixelfed-redis:
+    image: elestio/redis:7.0
+    restart: unless-stopped
+    volumes:
+      - "${APP_DATA_DIR}/data/redis:/data"
+    command: "redis-server --requirepass ${PIXELFED_REDIS_PASSWORD}"
+    networks:
+      - tipi_main_network
