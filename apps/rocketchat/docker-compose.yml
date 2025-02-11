@@ -1,0 +1,55 @@
+services:
+  rocketchat:
+    image: registry.rocket.chat/rocketchat/rocket.chat:latest
+    restart: always
+    environment:
+      MONGO_URL: "mongodb://rocketchat-mongodb:27017/rocketchat"
+      MONGO_OPLOG_URL: "mongodb://rocketchat-mongodb:27017/rocketchat"
+      ROOT_URL: ${APP_PROTOCOL:-http}://${APP_DOMAIN}
+      PORT: 3000      
+      DEPLOY_METHOD: docker
+    depends_on:
+      - rocketchat-mongodb
+    ports:
+      - ${APP_PORT}:3000
+    networks:
+      - tipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.rocketchat-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.rocketchat.loadbalancer.server.port: 3000
+      # Web
+      traefik.http.routers.rocketchat-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.rocketchat-insecure.entrypoints: web
+      traefik.http.routers.rocketchat-insecure.service: rocketchat
+      traefik.http.routers.rocketchat-insecure.middlewares: rocketchat-web-redirect
+      # Websecure
+      traefik.http.routers.rocketchat.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.rocketchat.entrypoints: websecure
+      traefik.http.routers.rocketchat.service: rocketchat
+      traefik.http.routers.rocketchat.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.rocketchat-local-insecure.rule: Host(`rocketchat.${LOCAL_DOMAIN}`)
+      traefik.http.routers.rocketchat-local-insecure.entrypoints: web
+      traefik.http.routers.rocketchat-local-insecure.service: rocketchat
+      traefik.http.routers.rocketchat-local-insecure.middlewares: rocketchat-web-redirect
+      # Local domain secure
+      traefik.http.routers.rocketchat-local.rule: Host(`rocketchat.${LOCAL_DOMAIN}`)
+      traefik.http.routers.rocketchat-local.entrypoints: websecure
+      traefik.http.routers.rocketchat-local.service: rocketchat
+      traefik.http.routers.rocketchat-local.tls: true
+      runtipi.managed: true
+
+  rocketchat-mongodb:
+    image: docker.io/bitnami/mongodb:6.0
+    restart: always
+    volumes:
+      - ${APP_DATA_DIR}/data/mongodb:/bitnami/mongodb
+    environment:
+      MONGODB_PORT_NUMBER: 27017
+      MONGODB_ADVERTISED_HOSTNAME: rocketchat-mongodb
+      MONGODB_ENABLE_JOURNAL: true
+      ALLOW_EMPTY_PASSWORD: yes
+    networks:
+      - tipi_main_network
