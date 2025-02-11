@@ -1,0 +1,56 @@
+services:
+  habitica:
+    image: docker.io/awinterstein/habitica-server:latest
+    restart: unless-stopped
+    depends_on:
+      - habitica-mongodb
+    environment:
+      - NODE_DB_URI=mongodb://habitica-mongodb/habitica
+      - BASE_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
+      - INVITE_ONLY=${INVITE_ONLY}
+      - EMAIL_SERVER_URL=${SMTP_HOST}
+      - EMAIL_SERVER_PORT=${SMTP_PORT}
+      - EMAIL_SERVER_AUTH_USER=${SMTP_USER}
+      - EMAIL_SERVER_AUTH_PASSWORD=${SMTP_PASSWORD}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+    ports:
+      - ${APP_PORT}:3000
+    networks:
+      - runtipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.habitica-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.habitica.loadbalancer.server.port: 3000
+      # Web
+      traefik.http.routers.habitica-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.habitica-insecure.entrypoints: web
+      traefik.http.routers.habitica-insecure.service: habitica
+      traefik.http.routers.habitica-insecure.middlewares: habitica-web-redirect
+      # Websecure
+      traefik.http.routers.habitica.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.habitica.entrypoints: websecure
+      traefik.http.routers.habitica.service: habitica
+      traefik.http.routers.habitica.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.habitica-local-insecure.rule: Host(`habitica.${LOCAL_DOMAIN}`)
+      traefik.http.routers.habitica-local-insecure.entrypoints: web
+      traefik.http.routers.habitica-local-insecure.service: habitica
+      traefik.http.routers.habitica-local-insecure.middlewares: habitica-web-redirect
+      # Local domain secure
+      traefik.http.routers.habitica-local.rule: Host(`habitica.${LOCAL_DOMAIN}`)
+      traefik.http.routers.habitica-local.entrypoints: websecure
+      traefik.http.routers.habitica-local.service: habitica
+      traefik.http.routers.habitica-local.tls: true
+      runtipi.managed: true
+
+  habitica-mongodb:
+    image: docker.io/mongo:5.0
+    restart: unless-stopped
+    hostname: habitica-mongodb
+    command: ["--replSet", "rs", "--bind_ip_all", "--port", "27017"]
+    volumes:
+      - ${APP_DATA_DIR}/data/db:/data/db
+      - ${APP_DATA_DIR}/data/dbconf:/data/configdb
+    networks:
+      - runtipi_main_network
