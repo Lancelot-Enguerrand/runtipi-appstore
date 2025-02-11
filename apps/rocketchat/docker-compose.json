@@ -10,7 +10,8 @@
         "MONGO_OPLOG_URL": "mongodb://rocketchat-mongodb:27017/rocketchat",
         "ROOT_URL": "${APP_PROTOCOL:-http}://${APP_DOMAIN}",
         "PORT": 3000,
-        "DEPLOY_METHOD": "docker"
+        "DEPLOY_METHOD": "docker",
+        "OVERWRITE_SETTING_Setup_Wizard": "completed"
       },
       "dependsOn": ["rocketchat-mongodb"]
     },
