@@ -15,6 +15,11 @@
   "source": "https://github.com/awinterstein/habitica",
   "form_fields": [
     {
+      "type": "boolean",
+      "label": "Invite only",
+      "env_variable": "INVITE_ONLY"
+    },
+    {
       "type": "text",
       "label": "SMTP server hostname",
       "required": false,
