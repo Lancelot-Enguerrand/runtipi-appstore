@@ -4,6 +4,8 @@ services:
     image: dohsimpson/habittrove
     ports:
       - ${APP_PORT}:3000
+    environment:
+      - AUTH_SECRET: "${HABITTROVE_AUTH_SECRET}"
     volumes:
       - "${APP_DATA_DIR}/data/app:/app/data"
     restart: unless-stopped
