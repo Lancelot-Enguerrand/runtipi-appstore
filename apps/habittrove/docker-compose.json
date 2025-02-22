@@ -5,7 +5,7 @@
       "image": "dohsimpson/habittrove",
       "isMain": true,
       "internalPort": 3000,
-      "environmnent": {
+      "environment": {
           "AUTH_SECRET": "${HABITTROVE_AUTH_SECRET}"
       },
       "volumes": [
