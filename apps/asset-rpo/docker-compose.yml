@@ -4,7 +4,7 @@ services:
     image: zurielbax/asset-rpo:latest
     container_name: asset-rpo
     depends_on:
-      asset-db:
+      asset-rpo-db:
         condition: service_healthy
     ports:
       - ${APP_PORT}:80
