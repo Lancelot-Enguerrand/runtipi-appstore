@@ -1,0 +1,72 @@
+services:
+  # Cozy Stack
+  cozy:
+    image: cozy/cozy-stack
+    restart: unless-stopped
+    depends_on:
+      - cozy-couchdb
+    ports:
+     - ${APP_PORT}:8080
+    environment:
+     - COUCHDB_HOST=cozy-couchdb
+     - COUCHDB_USER=cozy
+     - COUCHDB_PASSWORD=${COZY_COUCHDB_PASSWORD}
+     - COZY_COUCHDB_URL=http://cozy:${COZY_COUCHDB_PASSWORD}@cozy-couchdb:5984
+    healthcheck:
+      test: '[ "$(curl -fsSL http://localhost:8080/status | jq -r .status)" = "OK" ]'
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - ${APP_DATA_DIR}/data/data:/var/lib/cozy/data
+      - ${APP_DATA_DIR}/data/config:/etc/cozy/
+    networks:
+      - tipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.cozy-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.cozy.loadbalancer.server.port: 8080
+      # Web
+      traefik.http.routers.cozy-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.cozy-insecure.entrypoints: web
+      traefik.http.routers.cozy-insecure.service: cozy
+      traefik.http.routers.cozy-insecure.middlewares: cozy-web-redirect
+      # Websecure
+      traefik.http.routers.cozy.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.cozy.entrypoints: websecure
+      traefik.http.routers.cozy.service: cozy
+      traefik.http.routers.cozy.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.cozy-local-insecure.rule: Host(`cozy.${LOCAL_DOMAIN}`)
+      traefik.http.routers.cozy-local-insecure.entrypoints: web
+      traefik.http.routers.cozy-local-insecure.service: cozy
+      traefik.http.routers.cozy-local-insecure.middlewares: cozy-web-redirect
+      # Local domain secure
+      traefik.http.routers.cozy-local.rule: Host(`cozy.${LOCAL_DOMAIN}`)
+      traefik.http.routers.cozy-local.entrypoints: websecure
+      traefik.http.routers.cozy-local.service: cozy
+      traefik.http.routers.cozy-local.tls: true
+      runtipi.managed: true
+  # Database
+  cozy-couchdb:
+    image: couchdb:3.3
+    restart: unless-stopped
+    volumes:
+      - ${APP_DATA_DIR}/data/couchdb:/opt/couchdb/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://cozy:${COZY_COUCHDB_PASSWORD}@localhost:5984/_up",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - tipi_main_network
+  
