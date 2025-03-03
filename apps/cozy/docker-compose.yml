@@ -1,7 +1,7 @@
 services:
   # Cozy Stack
   cozy:
-    image: cozy/cozy-stack
+    image: cozy/cozy-stack:latest
     restart: unless-stopped
     depends_on:
       - cozy-couchdb
