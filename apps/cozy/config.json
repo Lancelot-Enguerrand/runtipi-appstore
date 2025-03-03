@@ -10,6 +10,7 @@
   "version": "latest",
   "categories": ["data", "utilities"],
   "description": "Bring all your web services in the same private space.",
+  "short_desc": "All your web services in a private space.",
   "author": "Cozy Cloud",
   "source": "https://github.com/cozy/cozy-stack",
   "form_fields": [
