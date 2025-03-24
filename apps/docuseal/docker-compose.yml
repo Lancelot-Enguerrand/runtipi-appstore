@@ -1,0 +1,58 @@
+services:
+  docuseal:
+    image: docuseal/docuseal:latest
+    ports:
+      - ${APP_PORT}:3000
+    volumes:
+      - ${APP_DATA_DIR}/data/app/docuseal:/data/docuseal
+    environment:
+      - HOST="${APP_DOMAIN}"
+      - DATABASE_URL=postgresql://docuseal:${DOCUSEAL_DB_PASSWORD}@docuseal-db:5432/docuseal
+      - SECRET_KEY_BASE="${DOCUSEAL_SECRET_KEY}"
+    depends_on:
+      docuseal-db:
+        condition: service_healthy
+    networks:
+      - tipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.docuseal-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.docuseal.loadbalancer.server.port: 3000
+      # Web
+      traefik.http.routers.docuseal-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.docuseal-insecure.entrypoints: web
+      traefik.http.routers.docuseal-insecure.service: docuseal
+      traefik.http.routers.docuseal-insecure.middlewares: docuseal-web-redirect
+      # Websecure
+      traefik.http.routers.docuseal.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.docuseal.entrypoints: websecure
+      traefik.http.routers.docuseal.service: docuseal
+      traefik.http.routers.docuseal.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.docuseal-local-insecure.rule: Host(`docuseal.${LOCAL_DOMAIN}`)
+      traefik.http.routers.docuseal-local-insecure.entrypoints: web
+      traefik.http.routers.docuseal-local-insecure.service: docuseal
+      traefik.http.routers.docuseal-local-insecure.middlewares: docuseal-web-redirect
+      # Local domain secure
+      traefik.http.routers.docuseal-local.rule: Host(`docuseal.${LOCAL_DOMAIN}`)
+      traefik.http.routers.docuseal-local.entrypoints: websecure
+      traefik.http.routers.docuseal-local.service: docuseal
+      traefik.http.routers.docuseal-local.tls: true
+      runtipi.managed: true
+
+  docuseal-db:
+    image: postgres:15
+    volumes:
+      - ${APP_DATA_DIR}/data/app/pg_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: docuseal
+      POSTGRES_PASSWORD: ${DOCUSEAL_DB_PASSWORD}
+      POSTGRES_DB: docuseal
+    healthcheck:
+      test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tipi_main_network
