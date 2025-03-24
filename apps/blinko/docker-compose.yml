@@ -1,0 +1,78 @@
+services:
+  blinko:
+    image: blinkospace/blinko:latest
+    container_name: blinko
+    environment:
+      NODE_ENV: production
+      NEXTAUTH_URL: ${APP_PROTOCOL-http}://${APP_DOMAIN}
+      NEXT_PUBLIC_BASE_URL: ${APP_PROTOCOL-http}://${APP_DOMAIN}
+      NEXTAUTH_SECRET: ${BLINKO_NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://tipi:${BLINKO_DB_PASSWORD}@blinko-db:5432/blinko
+    depends_on:
+      blinko-db:
+        condition: service_healthy
+    volumes:
+      - ${APP_DATA_DIR}/data/blinko:/app/.blinko 
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - ${APP_PORT}:1111
+    healthcheck:
+      test: "curl -f http://blinko:1111/"
+      interval: 30s 
+      timeout: 10s   
+      retries: 5     
+      start_period: 30s 
+    networks:
+      - tipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.blinko-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.blinko.loadbalancer.passhostheader: true
+      traefik.http.services.blinko.loadbalancer.server.port: 1111
+      # Web
+      traefik.http.routers.blinko-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.blinko-insecure.entrypoints: web
+      traefik.http.routers.blinko-insecure.service: blinko
+      traefik.http.routers.blinko-insecure.middlewares: blinko-web-redirect
+      # Websecure
+      traefik.http.routers.blinko.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.blinko.entrypoints: websecure
+      traefik.http.routers.blinko.service: blinko
+      traefik.http.routers.blinko.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.blinko-local-insecure.rule: Host(`blinko.${LOCAL_DOMAIN}`)
+      traefik.http.routers.blinko-local-insecure.entrypoints: web
+      traefik.http.routers.blinko-local-insecure.service: blinko
+      traefik.http.routers.blinko-local-insecure.middlewares: blinko-web-redirect
+      # Local domain secure
+      traefik.http.routers.blinko-local.rule: Host(`blinko.${LOCAL_DOMAIN}`)
+      traefik.http.routers.blinko-local.entrypoints: websecure
+      traefik.http.routers.blinko-local.service: blinko
+      traefik.http.routers.blinko-local.tls: true
+      runtipi.managed: true
+
+  blinko-db:
+    image: postgres:14
+    container_name: blinko-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blinko
+      POSTGRES_USER: tipi
+      POSTGRES_PASSWORD: ${BLINKO_DB_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tipi_main_network
+    labels:
+      runtipi.managed: true
