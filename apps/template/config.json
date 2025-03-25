@@ -1,0 +1,53 @@
+{
+  "$schema": "../schema.json",
+  "name": "Template",
+  "available": true,
+  "exposable": true,
+  "dynamic_config": true,
+  "port": 2529,
+  "id": "template",
+  "tipi_version": 1,
+  "version": "version",
+  "categories": ["data", "social"],
+  "description": "Template is not just an app, it is an inspiration",
+  "short_desc": "Template app",
+  "author": "Template Author",
+  "source": "",
+  "form_fields": [
+    {
+      "type": "text",
+      "label": "User login",
+      "required": false,
+      "env_variable": "TEMPLATE_USER_LOGIN"
+    },
+    {
+      "type": "password",
+      "label": "User password",
+      "required": false,
+      "env_variable": "TEMPLATE_USER_PASSWORD"
+    },
+    {
+      "type": "email",
+      "label": "Email",
+      "required": false,
+      "env_variable": "TEMPLATE_EMAIL"
+    },
+    {
+      "type": "random",
+      "label": "Database password",
+      "required": false,
+      "min": 32,
+      "env_variable": "TEMPLATE_DATABASE_PASSWORD"
+    },
+    {
+      "type": "random",
+      "label": "Application key",
+      "required": false,
+      "min": 32,
+      "env_variable": "TEMPLATE_APP_KEY"
+    }
+  ],
+  "supported_architectures": ["arm64", "amd64"],
+  "created_at": 1743212345678,
+  "updated_at": 1743212345678
+}
