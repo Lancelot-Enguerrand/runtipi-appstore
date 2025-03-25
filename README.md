@@ -9,5 +9,5 @@ It contains a variety of new apps.
 ## Apps available (1)
 
 | Name         | Description  | Port |
-| ------------ | ------------ | ---- | --- |
-| [Template]() | Template app | 2529 | no  |
+| ------------ | ------------ | ---- |
+| [Template]() | Template app | 2529 |
