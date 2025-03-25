@@ -1,0 +1,60 @@
+services:
+  template:
+    image: template/template
+    container_name: template
+    depends_on:
+      - template-db
+    ports:
+      - ${APP_PORT}:80
+    environment:
+      - APP_KEY=${TEMPLATE_APP_KEY}
+      - DB_HOST=template-db
+      - DB_USERNAME=usertemplate
+      - DB_PASSWORD=${TEMPLATE_DATABASE_PASSWORD}
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    restart: unless-stopped
+    networks:
+      - tipi_main_network
+    labels:
+      # Main
+      traefik.enable: true
+      traefik.http.middlewares.template-web-redirect.redirectscheme.scheme: https
+      traefik.http.services.template.loadbalancer.server.port: 80
+      # Web
+      traefik.http.routers.template-insecure.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.template-insecure.entrypoints: web
+      traefik.http.routers.template-insecure.service: template
+      traefik.http.routers.template-insecure.middlewares: template-web-redirect
+      # Websecure
+      traefik.http.routers.template.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.template.entrypoints: websecure
+      traefik.http.routers.template.service: template
+      traefik.http.routers.template.tls.certresolver: myresolver
+      # Local domain
+      traefik.http.routers.template-local-insecure.rule: Host(`template.${LOCAL_DOMAIN}`)
+      traefik.http.routers.template-local-insecure.entrypoints: web
+      traefik.http.routers.template-local-insecure.service: template
+      traefik.http.routers.template-local-insecure.middlewares: template-web-redirect
+      # Local domain secure
+      traefik.http.routers.template-local.rule: Host(`template.${LOCAL_DOMAIN}`)
+      traefik.http.routers.template-local.entrypoints: websecure
+      traefik.http.routers.template-local.service: template
+      traefik.http.routers.template-local.tls: true
+      runtipi.managed: true
+  template-db:
+    image: mariadb:10
+    container_name: template-db
+    environment:
+      - TZ=${TZ}
+      - MARIADB_RANDOM_ROOT_PASSWORD=true
+      - MARIADB_DATABASE=template
+      - MARIADB_USER=user
+      - MARIADB_PASSWORD=${TEMPLATE_DATABASE_PASSWORD}
+    volumes:
+      - ${APP_DATA_DIR}/data/mysql:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - tipi_main_network
+    labels:
+      runtipi.managed: true
