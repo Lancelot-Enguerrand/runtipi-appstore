@@ -41,10 +41,10 @@ const getAppsList = async () => {
 };
 
 const appToReadme = async (app: App) => {
-  return `| [${app.name}](${app.source}) | ${app.description} | ${app.port} | ${app.dynamic ? "yes" : "no"} |`;
+  return `| [${app.name}](${app.source}) | ${app.description} | ${app.port} |`;
 };
 
-const writeToReadme = (appsList: string, count: number, dynamicConfigCount: number) => {
+const writeToReadme = (appsList: string, count: number) => {
   const baseReadme = fs.readFileSync(baseReadmePath, "utf8");
   let finalReadme = baseReadme.replace("<!appsList>", appsList);
   finalReadme = finalReadme.replace("<!appsCount>", count.toString());
@@ -62,7 +62,6 @@ const main = async () => {
   }
 
   const count = appKeys.length;
-  const dynamicConfigCount = appKeys.filter((key) => apps[key].dynamic).length;
 
   writeToReadme(appsList, count);
 
